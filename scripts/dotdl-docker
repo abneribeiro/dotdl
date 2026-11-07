@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# dotboot (via Docker): runs dotboot in a container, with no yt-dlp, ffmpeg or
-# deno on the host. `make install-docker` puts it on PATH as "dotboot".
+# dotdl (via Docker): runs dotdl in a container, with no yt-dlp, ffmpeg or
+# deno on the host. `make install-docker` puts it on PATH as "dotdl".
 #
-#   dotboot video https://youtu.be/xxxx
-#   dotboot audio -f m4a -o music https://youtu.be/xxxx
-#   dotboot doctor
+#   dotdl video https://youtu.be/xxxx
+#   dotdl audio -f m4a -o music https://youtu.be/xxxx
+#   dotdl doctor
 #
 # The container runs as your user with your home mounted at the same path:
-# ~, absolute paths and ~/.config/dotboot work as with the native install.
+# ~, absolute paths and ~/.config/dotdl work as with the native install.
 #
-# Variables: DOTBOOT_IMAGE (default dotboot:latest) and dotboot's DOTBOOT_*.
+# Variables: DOTDL_IMAGE (default dotdl:latest) and dotdl's DOTDL_*.
 set -euo pipefail
 
-image=${DOTBOOT_IMAGE:-dotboot:latest}
+image=${DOTDL_IMAGE:-dotdl:latest}
 
 docker_args=(run --rm -i --init
 	--user "$(id -u):$(id -g)"
@@ -45,7 +45,7 @@ mount_same() {
 		case "$(docker context show 2>/dev/null)" in colima*) colima=yes ;; esac
 	fi
 	if [ "$colima" = yes ]; then
-		echo "dotboot: $path is outside your home, which Colima does not share by default" \
+		echo "dotdl: $path is outside your home, which Colima does not share by default" \
 			"(add it under mounts in ~/.colima/default/colima.yaml)." >&2
 	fi
 	docker_args+=(-v "$path:$path")
@@ -54,8 +54,8 @@ mount_same() {
 
 mount_same "$PWD"
 
-# dotboot's variables set on the host apply inside too.
-for var in DOTBOOT_OUTPUT_DIR DOTBOOT_COOKIES_FILE DOTBOOT_LOG_LEVEL DOTBOOT_JS_RUNTIMES; do
+# dotdl's variables set on the host apply inside too.
+for var in DOTDL_OUTPUT_DIR DOTDL_COOKIES_FILE DOTDL_LOG_LEVEL DOTDL_JS_RUNTIMES; do
 	if [ -n "${!var:-}" ]; then
 		docker_args+=(-e "$var=${!var}")
 	fi
@@ -74,9 +74,9 @@ config_value() {
 	printf '%s' "$value"
 }
 
-# setting returns a setting with dotboot's priority: environment, ./.env,
-# then ~/.config/dotboot/config.env.
-config_file=${XDG_CONFIG_HOME:-$HOME/.config}/dotboot/config.env
+# setting returns a setting with dotdl's priority: environment, ./.env,
+# then ~/.config/dotdl/config.env.
+config_file=${XDG_CONFIG_HOME:-$HOME/.config}/dotdl/config.env
 setting() {
 	local key=$1 value=${!1:-}
 	[ -n "$value" ] || value=$(config_value "$key" .env)
@@ -86,11 +86,11 @@ setting() {
 
 # The output and cookies folders must be mounted wherever they are set:
 # otherwise a folder from config.env did not exist in the container.
-output=$(setting DOTBOOT_OUTPUT_DIR)
+output=$(setting DOTDL_OUTPUT_DIR)
 if [ -n "$output" ] && mkdir -p "$output" 2>/dev/null; then
 	mount_same "$(cd "$output" && pwd)"
 fi
-cookies=$(setting DOTBOOT_COOKIES_FILE)
+cookies=$(setting DOTDL_COOKIES_FILE)
 if [ -n "$cookies" ] && [ -e "$cookies" ]; then
 	mount_same "$(cd "$(dirname "$cookies")" && pwd)"
 fi

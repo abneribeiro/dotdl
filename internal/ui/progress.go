@@ -12,7 +12,7 @@ import (
 	tea "charm.land/bubbletea/v2"
 	"charm.land/lipgloss/v2"
 
-	"github.com/abneribeiro/dotboot/internal/jobs"
+	"github.com/abneribeiro/dotdl/internal/jobs"
 )
 
 // RunFunc is a job to run while showing its progress.
@@ -128,7 +128,7 @@ func (m *progressModel) apply(e jobs.Event) {
 }
 
 // noteFrom keeps the log lines worth showing under the bar: yt-dlp warnings
-// and dotboot's own notes. The rest of yt-dlp's chatter is hidden.
+// and dotdl's own notes. The rest of yt-dlp's chatter is hidden.
 func noteFrom(line string) (note string, warning bool) {
 	switch {
 	case strings.HasPrefix(line, "WARNING:"):

@@ -10,9 +10,9 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/abneribeiro/dotboot/internal/doctor"
-	"github.com/abneribeiro/dotboot/internal/downloader"
-	"github.com/abneribeiro/dotboot/internal/jobs"
+	"github.com/abneribeiro/dotdl/internal/doctor"
+	"github.com/abneribeiro/dotdl/internal/downloader"
+	"github.com/abneribeiro/dotdl/internal/jobs"
 )
 
 // Help is a command's help screen.
@@ -176,7 +176,7 @@ func PrintConfig(w io.Writer, path string, settings []Setting) {
 		b.WriteString("  " + padRight(strongStyle.Render(s.Key), width) + "  " + value + "\n")
 		b.WriteString("  " + strings.Repeat(" ", width+2) + mutedStyle.Render(s.Description) + "\n")
 	}
-	b.WriteString("\n" + mutedStyle.Render("Stored in "+path+". Change one with: dotboot config <key> <value>") + "\n")
+	b.WriteString("\n" + mutedStyle.Render("Stored in "+path+". Change one with: dotdl config <key> <value>") + "\n")
 	lipgloss.Fprint(w, b.String())
 }
 

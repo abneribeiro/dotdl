@@ -1,8 +1,8 @@
-# AGENTS.md — dotboot
+# AGENTS.md — dotdl
 
 ## Project Overview
 
-dotboot is a command-line tool, in Go, that downloads videos and music with
+dotdl is a command-line tool, in Go, that downloads videos and music with
 `yt-dlp` in a format every player opens (iPhone, Android, Windows, macOS,
 WhatsApp). Commands:
 
@@ -10,7 +10,7 @@ WhatsApp). Commands:
   playlists, batch files, trims, resumable.
 - `audio [flags] <url>...`: MP3 or M4A with title, artist and cover art.
 - `doctor`, `config [key] [value]`, `version`, `help [command]`.
-- `dotboot <url>` is a shortcut for `dotboot video <url>`.
+- `dotdl <url>` is a shortcut for `dotdl video <url>`.
 
 Downloads show a Bubble Tea progress view (spinner, coral bar, speed, ETA,
 latest warning) on a terminal, and plain lines otherwise. Everything else
@@ -27,22 +27,22 @@ theme.
 ```bash
 make setup             # Guided setup: install (docker|native), output folder, doctor
 make run ARGS="..."    # Run from source
-make build             # bin/dotboot with version ldflags
+make build             # bin/dotdl with version ldflags
 make install           # Native binary into ~/.local/bin (PREFIX=… to change)
-make install-docker    # Docker wrapper (scripts/dotboot-docker) as `dotboot`
+make install-docker    # Docker wrapper (scripts/dotdl-docker) as `dotdl`
 make deps              # yt-dlp + deno (checksum-verified) and ffmpeg on the host
-make docker-build      # The image dotboot:latest (~1GB, mostly ffmpeg)
+make docker-build      # The image dotdl:latest (~1GB, mostly ffmpeg)
 make update-ytdlp      # Pin the latest yt-dlp in the Dockerfile and rebuild
 make release-snapshot  # GoReleaser in Docker, all platforms into dist/
 ```
 
-The module path is `github.com/abneribeiro/dotboot`.
+The module path is `github.com/abneribeiro/dotdl`.
 
 ## Testing
 
 ```bash
 make check                     # gofmt + vet (incl. integration tag) + go test -race
-make test-integration-docker   # real yt-dlp/ffmpeg downloads inside dotboot:latest
+make test-integration-docker   # real yt-dlp/ffmpeg downloads inside dotdl:latest
 ```
 
 - Tests are table-driven and use only the standard `testing` package.
@@ -74,7 +74,7 @@ leftover features.
 ### Architecture
 
 ```
-cmd/dotboot/main.go    Entry point: config.LoadFiles + Load, slog, signals
+cmd/dotdl/main.go      Entry point: config.LoadFiles + Load, slog, signals
                        (signal.NotifyContext lives ONLY here), version
                        string, cli.App.Run → exit code.
 internal/cli/          Commands: flag parsing (short and long names,
@@ -95,9 +95,9 @@ internal/downloader/   yt-dlp + ffmpeg. BuildArgs, QualitySort, MP4Sort,
                        Describe summarizes a file for the user.
 internal/doctor/       Environment checks (Collect, HasFailures).
 internal/config/       Env-var configuration, strict validation, the global
-                       ~/.config/dotboot/config.env and Save.
+                       ~/.config/dotdl/config.env and Save.
 internal/procio/       LineWriter (splits on \n AND \r) and TailBuffer.
-scripts/               setup.sh, install-deps.sh, dotboot-docker (wrapper),
+scripts/               setup.sh, install-deps.sh, dotdl-docker (wrapper),
                        install.sh (releases).
 ```
 
@@ -110,7 +110,7 @@ Key invariants to preserve:
   Fraction/-1, Speed, ETA, Item, Index/Count, Log). An Event's empty fields
   mean "unchanged". Reporters may be called from several goroutines; the
   `reporterSink` serializes them. The UI shows only `WARNING:` lines and
-  dotboot's own notes from the log.
+  dotdl's own notes from the log.
 - **Ctrl+C**: the progress program handles it as a key and cancels the job's
   context (Bubble Tea runs `WithoutSignalHandler`; signals belong to main).
   `cmd.Cancel` sends `os.Interrupt` to yt-dlp/ffmpeg with a `WaitDelay`, so
@@ -129,12 +129,12 @@ Key invariants to preserve:
   with fallback), never an `-f [height<=N]` filter, which turned a vertical
   720x1280 Short into 360x640.
 - **Pending conversions persist**: in MP4 mode the `--print-to-file` target
-  is `<outdir>/.dotboot-pending.txt`. yt-dlp records the archive BEFORE
+  is `<outdir>/.dotdl-pending.txt`. yt-dlp records the archive BEFORE
   `EnsureMP4` runs, so an interrupted conversion would otherwise leave a
   `.webm` forever. Deleted only when everything converted.
 - **Trim + archive don't mix**: a trim never writes the archive, forces
   `--no-playlist` and has the interval in the file name (`outputTemplate`).
-  Audio uses its own archive (`.dotboot-archive-audio.txt`).
+  Audio uses its own archive (`.dotdl-archive-audio.txt`).
 - **`--print-to-file` implies `--simulate`**: `BuildArgs` always emits
   `--no-simulate` with it.
 
@@ -142,7 +142,7 @@ Key invariants to preserve:
 
 Group imports in blocks separated by blank lines, each sorted alphabetically:
 standard library, third-party (including `charm.land/...`), then internal
-`github.com/abneribeiro/dotboot/...`.
+`github.com/abneribeiro/dotdl/...`.
 
 ### Formatting & Naming
 
@@ -165,7 +165,7 @@ names.
 
 ### Logging
 
-`log/slog` only, level from `DOTBOOT_LOG_LEVEL`, on stderr, used for debug
+`log/slog` only, level from `DOTDL_LOG_LEVEL`, on stderr, used for debug
 detail. User-facing output goes through `ui`.
 
 ### Text and comments
@@ -177,13 +177,13 @@ detail. User-facing output goes through `ui`.
 ## Configuration
 
 Env vars parsed in `internal/config` (see `.env.example`):
-`DOTBOOT_OUTPUT_DIR`, `DOTBOOT_TEMP_DIR`, `DOTBOOT_COOKIES_FILE`,
-`DOTBOOT_JS_RUNTIMES`, `DOTBOOT_LOG_LEVEL`. Priority: environment > `./.env`
-> `~/.config/dotboot/config.env` (godotenv never overrides). `dotboot config`
+`DOTDL_OUTPUT_DIR`, `DOTDL_TEMP_DIR`, `DOTDL_COOKIES_FILE`,
+`DOTDL_JS_RUNTIMES`, `DOTDL_LOG_LEVEL`. Priority: environment > `./.env`
+> `~/.config/dotdl/config.env` (godotenv never overrides). `dotdl config`
 writes the file with `config.Save` (only the given keys, 0600). A leading `~`
 is expanded in every path.
 
-`DOTBOOT_OUTPUT_DIR` is the **base path**: used when `-o` is absent and the
+`DOTDL_OUTPUT_DIR` is the **base path**: used when `-o` is absent and the
 root of a relative `-o`; an absolute `-o` ignores it.
 
 ## Environment & Dependencies
@@ -191,13 +191,13 @@ root of a relative `-o`; an absolute `-o` ignores it.
 - **Runtime deps**: `yt-dlp`, `ffmpeg`, `ffprobe`, plus a JS runtime for
   YouTube: Deno (yt-dlp's default) or node (`--js-runtimes node`, picked
   automatically when it is the only one). Downloads refuse to start without
-  the three tools and point at `dotboot doctor`.
+  the three tools and point at `dotdl doctor`.
 - **Go deps**: Charm v2 (Bubble Tea, Bubbles, Lip Gloss), `charmbracelet/x`
   (`ansi`, `term`), godotenv. Flag parsing is stdlib `flag`.
 
 ## Docker
 
-One image, `dotboot:latest` (target `app`, ~1GB, mostly ffmpeg's libraries).
+One image, `dotdl:latest` (target `app`, ~1GB, mostly ffmpeg's libraries).
 Base images are written literally in the `FROM` lines so Dependabot can bump
 them.
 
@@ -207,9 +207,9 @@ them.
 | `builder` | Static binary (`CGO_ENABLED=0`, `-trimpath`, version ldflags) |
 | `tools`   | yt-dlp standalone binary, pinned (`ARG YTDLP_VERSION`), verified against `SHA2-256SUMS` |
 | `deno`    | Deno binary (yt-dlp's JS runtime) |
-| `app`     | Debian slim + ffmpeg + yt-dlp + deno + binary; non-root user; `ENTRYPOINT /dotboot` |
+| `app`     | Debian slim + ffmpeg + yt-dlp + deno + binary; non-root user; `ENTRYPOINT /dotdl` |
 
-`scripts/dotboot-docker` runs the image as the calling user with `$HOME`
+`scripts/dotdl-docker` runs the image as the calling user with `$HOME`
 mounted at the same path, `-t` when there is a terminal (for the progress
 view), and same-path mounts for absolute paths outside the home: `-o`/
 `--output` values, the output and cookies paths from the environment,
@@ -217,7 +217,7 @@ view), and same-path mounts for absolute paths outside the home: `-o`/
 engine runs in a VM; with the `colima` context, which shares only the home,
 the wrapper warns when it mounts a path outside it (OrbStack shares more).
 The image sets
-`DOTBOOT_DOCKER=1` so `jobs.PrepareOutputDir` can explain an unreachable
+`DOTDL_DOCKER=1` so `jobs.PrepareOutputDir` can explain an unreachable
 folder.
 
 ## Releases & CI

@@ -9,7 +9,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abneribeiro/dotboot/internal/downloader"
+	"github.com/abneribeiro/dotdl/internal/downloader"
 )
 
 // tempFile creates a temporary file with the given content.

@@ -13,9 +13,9 @@ import (
 	"charm.land/lipgloss/v2"
 	"github.com/charmbracelet/x/ansi"
 
-	"github.com/abneribeiro/dotboot/internal/doctor"
-	"github.com/abneribeiro/dotboot/internal/downloader"
-	"github.com/abneribeiro/dotboot/internal/jobs"
+	"github.com/abneribeiro/dotdl/internal/doctor"
+	"github.com/abneribeiro/dotdl/internal/downloader"
+	"github.com/abneribeiro/dotdl/internal/jobs"
 )
 
 func TestHumanBytesAndRemaining(t *testing.T) {
@@ -39,7 +39,7 @@ func TestProgressModelAppliesEvents(t *testing.T) {
 	m.apply(jobs.Event{Log: "WARNING: only 720p available"})
 
 	out := plain(m.render())
-	for _, want := range []string{"dotboot", "video", "2 of 3", "Downloading", "Song [abc].mp4", "61%",
+	for _, want := range []string{"dotdl", "video", "2 of 3", "Downloading", "Song [abc].mp4", "61%",
 		"3.0 MB/s", "0:12 left", "only 720p available"} {
 		if !strings.Contains(out, want) {
 			t.Errorf("missing %q in:\n%s", want, out)
@@ -160,7 +160,7 @@ func TestPrintDoctor(t *testing.T) {
 
 func TestPrintHelpAlignsColumns(t *testing.T) {
 	var out bytes.Buffer
-	PrintHelp(&out, Help{Usage: "dotboot x", Description: "test", Sections: []HelpSection{
+	PrintHelp(&out, Help{Usage: "dotdl x", Description: "test", Sections: []HelpSection{
 		{Title: "Flags", Rows: [][2]string{{"-a", "first"}, {"--long-name", "second"}}},
 	}})
 	lines := strings.Split(out.String(), "\n")

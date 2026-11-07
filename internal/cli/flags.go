@@ -30,7 +30,7 @@ func boolFlag(fs *flag.FlagSet, p *bool, names string) {
 }
 
 // parseInterspersed parses flags in any position. The standard flag package
-// stops at the first non-flag argument, so "dotboot video URL -o dir" would
+// stops at the first non-flag argument, so "dotdl video URL -o dir" would
 // treat "-o" as a URL. After "--", everything is positional, by convention.
 func parseInterspersed(fs *flag.FlagSet, args []string) ([]string, error) {
 	var positional []string

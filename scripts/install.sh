@@ -1,18 +1,18 @@
 #!/usr/bin/env bash
-# Installs the latest dotboot release without cloning the repository:
+# Installs the latest dotdl release without cloning the repository:
 #
-#   curl -fsSL https://raw.githubusercontent.com/abneribeiro/dotboot/main/scripts/install.sh | bash
+#   curl -fsSL https://raw.githubusercontent.com/abneribeiro/dotdl/main/scripts/install.sh | bash
 #
 # When gh is installed and logged in it is used instead of curl, which also
 # works while a fork or a copy of the repository is private.
 #
-# Variables: DOTBOOT_VERSION (tag, default the latest release), BINDIR
-# (default ~/.local/bin), DOTBOOT_DEPS=1 to install yt-dlp, deno and ffmpeg too.
+# Variables: DOTDL_VERSION (tag, default the latest release), BINDIR
+# (default ~/.local/bin), DOTDL_DEPS=1 to install yt-dlp, deno and ffmpeg too.
 set -euo pipefail
 
-REPO=abneribeiro/dotboot
+REPO=abneribeiro/dotdl
 BINDIR=${BINDIR:-$HOME/.local/bin}
-version=${DOTBOOT_VERSION:-}
+version=${DOTDL_VERSION:-}
 
 have() { command -v "$1" >/dev/null 2>&1; }
 
@@ -40,7 +40,7 @@ if have gh && gh auth status >/dev/null 2>&1; then
 	if [ -z "$version" ]; then
 		version=$(gh release view -R "$REPO" --json tagName -q .tagName)
 	fi
-	asset="dotboot_${version#v}_${os}_${arch}.tar.gz"
+	asset="dotdl_${version#v}_${os}_${arch}.tar.gz"
 	gh release download "$version" -R "$REPO" -D "$tmp" -p "$asset" -p checksums.txt
 else
 	# Without gh this only works for public repositories: private assets need the authenticated API.
@@ -52,7 +52,7 @@ else
 		echo "Cannot find the latest release. While the repository is private, install and authenticate gh (gh auth login)." >&2
 		exit 1
 	fi
-	asset="dotboot_${version#v}_${os}_${arch}.tar.gz"
+	asset="dotdl_${version#v}_${os}_${arch}.tar.gz"
 	curl -fsSL -o "$tmp/$asset" "https://github.com/$REPO/releases/download/$version/$asset"
 	curl -fsSL -o "$tmp/checksums.txt" "https://github.com/$REPO/releases/download/$version/checksums.txt"
 fi
@@ -70,9 +70,9 @@ fi
 
 tar -xzf "$tmp/$asset" -C "$tmp"
 mkdir -p "$BINDIR"
-install -m 0755 "$tmp/dotboot" "$BINDIR/dotboot"
-# "dotboot version" already starts with the name.
-echo "✓ $("$BINDIR/dotboot" version | sed 's/^ *dotboot *//') installed in $BINDIR"
+install -m 0755 "$tmp/dotdl" "$BINDIR/dotdl"
+# "dotdl version" already starts with the name.
+echo "✓ $("$BINDIR/dotdl" version | sed 's/^ *dotdl *//') installed in $BINDIR"
 
 case ":$PATH:" in
 *":$BINDIR:"*) ;;
@@ -81,7 +81,7 @@ esac
 
 # The dependencies (yt-dlp, deno, ffmpeg): the script ships in the archive.
 # When run through "| bash", stdin is the script, so the question goes to /dev/tty.
-want_deps=${DOTBOOT_DEPS:-}
+want_deps=${DOTDL_DEPS:-}
 if [ -z "$want_deps" ]; then
 	if ! have yt-dlp || ! have ffmpeg; then
 		printf "Install yt-dlp, deno and ffmpeg now? [Y/n] " >/dev/tty 2>/dev/null || true
@@ -94,4 +94,4 @@ if [ "$want_deps" = 1 ]; then
 	BINDIR=$BINDIR bash "$tmp/scripts/install-deps.sh" </dev/tty
 fi
 
-"$BINDIR/dotboot" doctor || true
+"$BINDIR/dotdl" doctor || true

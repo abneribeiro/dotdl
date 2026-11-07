@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abneribeiro/dotboot/internal/procio"
+	"github.com/abneribeiro/dotdl/internal/procio"
 )
 
 // Run executes yt-dlp with the given options. Canceling the context sends

@@ -1,11 +1,11 @@
-// dotboot downloads videos and music with yt-dlp, as MP4 or MP3/M4A files
+// dotdl downloads videos and music with yt-dlp, as MP4 or MP3/M4A files
 // that play on any phone or computer.
 //
-//	dotboot video [flags] <url>...   Download videos
-//	dotboot audio [flags] <url>...   Download audio
-//	dotboot doctor                   Check the environment
-//	dotboot config [key] [value]     Show or change the settings
-//	dotboot version                  Print the version
+//	dotdl video [flags] <url>...   Download videos
+//	dotdl audio [flags] <url>...   Download audio
+//	dotdl doctor                   Check the environment
+//	dotdl config [key] [value]     Show or change the settings
+//	dotdl version                  Print the version
 package main
 
 import (
@@ -18,9 +18,9 @@ import (
 	"runtime/debug"
 	"syscall"
 
-	"github.com/abneribeiro/dotboot/internal/cli"
-	"github.com/abneribeiro/dotboot/internal/config"
-	"github.com/abneribeiro/dotboot/internal/ui"
+	"github.com/abneribeiro/dotdl/internal/cli"
+	"github.com/abneribeiro/dotdl/internal/config"
+	"github.com/abneribeiro/dotdl/internal/ui"
 )
 
 // Set with -ldflags "-X main.version=..." by the Makefile, GoReleaser and
@@ -72,7 +72,7 @@ func versionInfo() (v, c, d string) {
 	return v, c, d
 }
 
-// versionString describes the binary in full (dotboot version).
+// versionString describes the binary in full (dotdl version).
 func versionString() string {
 	v, c, d := versionInfo()
 	out := v

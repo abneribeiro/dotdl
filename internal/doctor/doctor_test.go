@@ -6,7 +6,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/abneribeiro/dotboot/internal/config"
+	"github.com/abneribeiro/dotdl/internal/config"
 )
 
 // fakeSystem simulates a PATH with the binaries in outputs (name to the
@@ -92,7 +92,7 @@ func TestCollectIncompleteEnvironment(t *testing.T) {
 	if !HasFailures(checks) {
 		t.Error("missing ffmpeg is a failure")
 	}
-	// Without DOTBOOT_COOKIES_FILE, the cookies line does not show at all.
+	// Without DOTDL_COOKIES_FILE, the cookies line does not show at all.
 	if c, ok := byName(checks, "cookies"); ok {
 		t.Errorf("unexpected cookies check: %+v", c)
 	}

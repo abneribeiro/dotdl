@@ -1,5 +1,5 @@
 # ============================================================
-# Multi-stage Dockerfile: one image with everything (dotboot:latest)
+# Multi-stage Dockerfile: one image with everything (dotdl:latest)
 # ============================================================
 #
 # Base images are written out in the FROM lines (no ARG) so Dependabot can
@@ -25,7 +25,7 @@ RUN go mod download
 # ============================================================
 FROM base AS builder
 
-# Version embedded in the binary (dotboot version); the Makefile passes git describe.
+# Version embedded in the binary (dotdl version); the Makefile passes git describe.
 ARG VERSION=dev
 ARG COMMIT=
 ARG DATE=
@@ -36,7 +36,7 @@ COPY cmd/ ./cmd/
 COPY internal/ ./internal/
 RUN CGO_ENABLED=0 go build -trimpath \
         -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
-        -o /dotboot ./cmd/dotboot
+        -o /dotdl ./cmd/dotdl
 
 # ============================================================
 # Tools stage: verified yt-dlp
@@ -94,16 +94,16 @@ RUN apt-get update && \
 
 COPY --from=tools /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 COPY --from=deno /deno /usr/local/bin/deno
-COPY --from=builder /dotboot /dotboot
+COPY --from=builder /dotdl /dotdl
 
 # The wrapper runs the container as the calling user; this user only applies
 # when the image runs without --user.
-RUN useradd --system --uid 10001 --create-home --home-dir /home/dotboot dotboot
-# DOTBOOT_DOCKER: folder errors explain what the wrapper mounts.
-ENV DOTBOOT_DOCKER=1
+RUN useradd --system --uid 10001 --create-home --home-dir /home/dotdl dotdl
+# DOTDL_DOCKER: folder errors explain what the wrapper mounts.
+ENV DOTDL_DOCKER=1
 
-USER dotboot
-WORKDIR /home/dotboot
+USER dotdl
+WORKDIR /home/dotdl
 
-# e.g. docker run --rm -t dotboot:latest video https://youtu.be/xxxx
-ENTRYPOINT ["/dotboot"]
+# e.g. docker run --rm -t dotdl:latest video https://youtu.be/xxxx
+ENTRYPOINT ["/dotdl"]

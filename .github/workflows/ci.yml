@@ -41,11 +41,11 @@ jobs:
         run: |
           for target in linux/amd64 linux/arm64 darwin/amd64 darwin/arm64 windows/amd64 windows/arm64; do
             echo "→ $target"
-            GOOS="${target%/*}" GOARCH="${target#*/}" CGO_ENABLED=0 go build -o /dev/null ./cmd/dotboot
+            GOOS="${target%/*}" GOARCH="${target#*/}" CGO_ENABLED=0 go build -o /dev/null ./cmd/dotdl
           done
 
       - name: Install scripts
-        run: shellcheck scripts/*.sh scripts/dotboot-docker
+        run: shellcheck scripts/*.sh scripts/dotdl-docker
 
   docker:
     # Only on main: the image takes a while to build and PRs rarely touch it.
@@ -54,7 +54,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
       - uses: docker/setup-buildx-action@v4
-      - name: Image (dotboot:latest)
+      - name: Image (dotdl:latest)
         uses: docker/build-push-action@v7
         with:
           context: .

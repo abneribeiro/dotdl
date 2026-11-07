@@ -1,4 +1,4 @@
-// Package ui is dotboot's look: a coral and green Lip Gloss theme, the
+// Package ui is dotdl's look: a coral and green Lip Gloss theme, the
 // Bubble Tea progress view of a download, and the printers for help,
 // results, errors, the doctor report and the settings. Printed output goes
 // through lipgloss.Fprint, which downgrades colors to what the terminal
@@ -41,7 +41,7 @@ const (
 	iconNote = "›"
 )
 
-// badge renders the coral "dotboot" tag that opens every screen.
+// badge renders the coral "dotdl" tag that opens every screen.
 func badge() string {
-	return badgeStyle.Render("dotboot")
+	return badgeStyle.Render("dotdl")
 }

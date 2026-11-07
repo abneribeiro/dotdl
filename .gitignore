@@ -2,8 +2,8 @@
 .env
 
 # Compiled binaries
-/dotboot
-/cmd/dotboot/dotboot
+/dotdl
+/cmd/dotdl/dotdl
 
 # Builds and releases (make build, make release-snapshot)
 /bin/

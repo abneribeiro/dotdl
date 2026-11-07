@@ -52,7 +52,7 @@ func TestLoadFromOverrides(t *testing.T) {
 	}
 }
 
-// In a .env the ~ arrives literally: without expansion, dotboot created a
+// In a .env the ~ arrives literally: without expansion, dotdl created a
 // folder named "~".
 func TestLoadFromExpandsTilde(t *testing.T) {
 	cfg, err := loadFrom(envMap(map[string]string{
@@ -144,7 +144,7 @@ func TestSave(t *testing.T) {
 
 func TestFilePathFollowsXDG(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "/xdg")
-	if got := FilePath(); got != "/xdg/dotboot/config.env" {
+	if got := FilePath(); got != "/xdg/dotdl/config.env" {
 		t.Errorf("FilePath = %q", got)
 	}
 }

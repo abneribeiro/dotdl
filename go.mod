@@ -1,4 +1,4 @@
-module github.com/abneribeiro/dotboot
+module github.com/abneribeiro/dotdl
 
 go 1.26.0
 

@@ -1,4 +1,4 @@
-# dotboot: install, test and run.
+# dotdl: install, test and run.
 #
 #   make              list the targets
 #   make setup        set everything up after cloning (guided)
@@ -11,14 +11,14 @@ SHELL := /usr/bin/env bash
 .DEFAULT_GOAL := help
 MAKEFLAGS += --no-print-directory
 
-BINARY          := dotboot
-PKG             := ./cmd/dotboot
+BINARY          := dotdl
+PKG             := ./cmd/dotdl
 BIN_DIR         := bin
 PREFIX          ?= $(HOME)/.local
 BINDIR          ?= $(PREFIX)/bin
-DOCKER_CLI_NAME ?= dotboot
+DOCKER_CLI_NAME ?= dotdl
 
-IMAGE ?= dotboot:latest
+IMAGE ?= dotdl:latest
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null)
@@ -51,10 +51,10 @@ help: ## Show this help
 		/^##@/ {printf "\n\033[1m%s\033[0m\n", substr($$0, 5)} \
 		/^[a-zA-Z0-9_-]+:.*## / {printf "  \033[38;2;255;135;113m%-24s\033[0m %s\n", $$1, $$2}' $(MAKEFILE_LIST)
 
-setup: ## Guided setup: install dotboot (Docker or native) and pick the output folder
+setup: ## Guided setup: install dotdl (Docker or native) and pick the output folder
 	@BINDIR="$(BINDIR)" IMAGE="$(IMAGE)" scripts/setup.sh
 
-run: ## Run dotboot from source (ARGS="video <url>")
+run: ## Run dotdl from source (ARGS="video <url>")
 	go run $(PKG) $(ARGS)
 
 ##@ Native install
@@ -62,7 +62,7 @@ run: ## Run dotboot from source (ARGS="video <url>")
 deps: ## Install yt-dlp and deno into BINDIR, and ffmpeg with the package manager
 	@BINDIR="$(BINDIR)" scripts/install-deps.sh
 
-build: ## Build bin/dotboot with the version embedded
+build: ## Build bin/dotdl with the version embedded
 	CGO_ENABLED=0 go build -trimpath -ldflags '$(LDFLAGS)' -o $(BIN_DIR)/$(BINARY) $(PKG)
 
 install: build ## Install the native binary into BINDIR (default ~/.local/bin)
@@ -73,13 +73,13 @@ install: build ## Install the native binary into BINDIR (default ~/.local/bin)
 	@"$(BINDIR)/$(BINARY)" version
 	@$(path_hint)
 
-install-docker: ## Install the wrapper that runs dotboot in Docker (DOCKER_CLI_NAME=dotboot)
+install-docker: ## Install the wrapper that runs dotdl in Docker (DOCKER_CLI_NAME=dotdl)
 	@mkdir -p "$(BINDIR)"
-	install -m 0755 scripts/dotboot-docker "$(BINDIR)/$(DOCKER_CLI_NAME)"
+	install -m 0755 scripts/dotdl-docker "$(BINDIR)/$(DOCKER_CLI_NAME)"
 	@echo "Installed $(BINDIR)/$(DOCKER_CLI_NAME), which runs the $(IMAGE) image (make docker-build)."
 	@$(path_hint)
 
-uninstall: ## Remove dotboot from BINDIR
+uninstall: ## Remove dotdl from BINDIR
 	rm -f "$(BINDIR)/$(BINARY)"
 
 ##@ Quality
@@ -119,7 +119,7 @@ check: lint test-race ## lint + tests with -race (what CI runs)
 
 ##@ Docker
 
-docker-build: ## Build the image (IMAGE=dotboot:latest)
+docker-build: ## Build the image (IMAGE=dotdl:latest)
 	$(DOCKER_BUILD) --target app -t $(IMAGE) .
 
 update-ytdlp: ## Pin the latest yt-dlp in the Dockerfile and rebuild the image
@@ -142,7 +142,7 @@ release: ## Create and push the tag VERSION=vX.Y.Z (GitHub Actions publishes it)
 	@if ! [[ "$(VERSION)" =~ ^v[0-9]+\.[0-9]+\.[0-9]+$$ ]]; then \
 		echo "usage: make release VERSION=v0.1.0" >&2; exit 1; fi
 	@if [ -n "$$(git status --porcelain)" ]; then echo "there are uncommitted changes" >&2; exit 1; fi
-	git tag -a $(VERSION) -m "dotboot $(VERSION)"
+	git tag -a $(VERSION) -m "dotdl $(VERSION)"
 	git push origin $(VERSION)
 
 clean: ## Remove bin/, dist/ and the coverage file

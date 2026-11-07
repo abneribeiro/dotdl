@@ -5,8 +5,8 @@ import (
 	"fmt"
 	"os"
 
-	"github.com/abneribeiro/dotboot/internal/config"
-	"github.com/abneribeiro/dotboot/internal/ui"
+	"github.com/abneribeiro/dotdl/internal/config"
+	"github.com/abneribeiro/dotdl/internal/ui"
 )
 
 // setting is a value the config command can change.
@@ -38,7 +38,7 @@ var settings = []setting{
 }
 
 var configHelp = ui.Help{
-	Usage:       "dotboot config [key] [value]",
+	Usage:       "dotdl config [key] [value]",
 	Description: "show or change the settings",
 	Sections: []ui.HelpSection{
 		{Title: "Keys", Rows: [][2]string{
@@ -46,12 +46,12 @@ var configHelp = ui.Help{
 			{"cookies <file>", "Cookies file for every download"},
 		}},
 		{Title: "Examples", Rows: [][2]string{
-			{"dotboot config", "  show every setting"},
-			{"dotboot config output ~/Videos", "  set a value"},
-			{`dotboot config cookies ""`, "  clear a value"},
+			{"dotdl config", "  show every setting"},
+			{"dotdl config output ~/Videos", "  set a value"},
+			{`dotdl config cookies ""`, "  clear a value"},
 		}},
 	},
-	Footer: "Environment variables (DOTBOOT_OUTPUT_DIR, DOTBOOT_COOKIES_FILE) take priority over the file.",
+	Footer: "Environment variables (DOTDL_OUTPUT_DIR, DOTDL_COOKIES_FILE) take priority over the file.",
 }
 
 // config runs the config command: no arguments lists the settings, a key
@@ -67,14 +67,14 @@ func (a *App) config(args []string) int {
 		return ExitOK
 	case 1, 2:
 	default:
-		ui.PrintUsageError(a.Stderr, errors.New("too many arguments"), "dotboot help config")
+		ui.PrintUsageError(a.Stderr, errors.New("too many arguments"), "dotdl help config")
 		return ExitUsage
 	}
 
 	s, ok := findSetting(args[0])
 	if !ok {
 		ui.PrintUsageError(a.Stderr, fmt.Errorf("unknown setting %q (use output or cookies)", args[0]),
-			"dotboot help config")
+			"dotdl help config")
 		return ExitUsage
 	}
 	if len(args) == 1 {

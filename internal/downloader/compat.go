@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abneribeiro/dotboot/internal/procio"
+	"github.com/abneribeiro/dotdl/internal/procio"
 )
 
 // The pair every iPhone, iPad, Android phone, Windows and macOS machine plays
@@ -206,7 +206,7 @@ func EnsureMP4(ctx context.Context, path string, hooks ConvertHooks) (string, er
 	finalPath := base + mp4Ext
 	// Write to a temporary name first: an interruption leaves the original
 	// intact instead of a truncated MP4.
-	tempPath := base + ".dotboot-compat" + mp4Ext
+	tempPath := base + ".dotdl-compat" + mp4Ext
 
 	args := compatArgs(path, tempPath, vcodec, acodec, pixFmt)
 	// Without the duration there is no fraction: convert anyway, without a

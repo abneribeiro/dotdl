@@ -1,4 +1,4 @@
-// Package cli is dotboot's command line: it parses the commands and flags,
+// Package cli is dotdl's command line: it parses the commands and flags,
 // hands requests to the engine (internal/jobs) and shows the results with
 // internal/ui. Run returns the process exit code.
 package cli
@@ -11,9 +11,9 @@ import (
 
 	"github.com/charmbracelet/x/term"
 
-	"github.com/abneribeiro/dotboot/internal/config"
-	"github.com/abneribeiro/dotboot/internal/doctor"
-	"github.com/abneribeiro/dotboot/internal/ui"
+	"github.com/abneribeiro/dotdl/internal/config"
+	"github.com/abneribeiro/dotdl/internal/doctor"
+	"github.com/abneribeiro/dotdl/internal/ui"
 )
 
 // Exit codes.
@@ -68,11 +68,11 @@ func (a *App) Run(ctx context.Context, args []string) int {
 	case "help", "-h", "--help":
 		return a.help(rest)
 	}
-	// "dotboot <url>" is a shortcut for "dotboot video <url>".
+	// "dotdl <url>" is a shortcut for "dotdl video <url>".
 	if strings.HasPrefix(cmd, "http://") || strings.HasPrefix(cmd, "https://") {
 		return a.download(ctx, kindVideo, args)
 	}
-	ui.PrintUsageError(a.Stderr, unknownCommandError(cmd), "dotboot help")
+	ui.PrintUsageError(a.Stderr, unknownCommandError(cmd), "dotdl help")
 	return ExitUsage
 }
 
@@ -83,7 +83,7 @@ func (a *App) help(args []string) int {
 	}
 	h, ok := commandHelp[args[0]]
 	if !ok {
-		ui.PrintUsageError(a.Stderr, unknownCommandError(args[0]), "dotboot help")
+		ui.PrintUsageError(a.Stderr, unknownCommandError(args[0]), "dotdl help")
 		return ExitUsage
 	}
 	ui.PrintHelp(a.Stdout, h)
@@ -106,7 +106,7 @@ func (e unknownCommandError) Error() string {
 }
 
 var rootHelp = ui.Help{
-	Usage:       "dotboot <command> [flags]",
+	Usage:       "dotdl <command> [flags]",
 	Description: "videos and music from YouTube, Instagram, X, TikTok and more",
 	Sections: []ui.HelpSection{
 		{Title: "Commands", Rows: [][2]string{
@@ -118,10 +118,10 @@ var rootHelp = ui.Help{
 			{"help <command>", "Show a command's flags"},
 		}},
 		{Title: "Examples", Rows: [][2]string{
-			{"dotboot video https://youtu.be/xxxx", ""},
-			{"dotboot video -q 720 -o lessons https://youtube.com/playlist?list=yyyy", ""},
-			{"dotboot audio -f m4a https://youtu.be/xxxx", ""},
-			{"dotboot https://x.com/user/status/123", ""},
+			{"dotdl video https://youtu.be/xxxx", ""},
+			{"dotdl video -q 720 -o lessons https://youtube.com/playlist?list=yyyy", ""},
+			{"dotdl audio -f m4a https://youtu.be/xxxx", ""},
+			{"dotdl https://x.com/user/status/123", ""},
 		}},
 	},
 	Footer: "Running the same command again skips what was downloaded and resumes what was interrupted.",
@@ -130,6 +130,6 @@ var rootHelp = ui.Help{
 var commandHelp = map[string]ui.Help{
 	"video":  videoHelp,
 	"audio":  audioHelp,
-	"doctor": {Usage: "dotboot doctor", Description: "check that everything dotboot needs is installed"},
+	"doctor": {Usage: "dotdl doctor", Description: "check that everything dotdl needs is installed"},
 	"config": configHelp,
 }

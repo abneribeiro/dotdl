@@ -7,7 +7,7 @@
 .gitignore
 
 # Compiled binaries and build output
-dotboot
+dotdl
 *.exe
 *.test
 bin/

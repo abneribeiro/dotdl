@@ -17,13 +17,13 @@ func TestBuildArgs(t *testing.T) {
 			opts: Options{
 				URLs:           []string{"https://youtu.be/abc", "https://x.com/u/status/1"},
 				OutputTemplate: "/videos/%(title)s [%(id)s].%(ext)s",
-				ArchiveFile:    "/videos/.dotboot-archive.txt",
+				ArchiveFile:    "/videos/.dotdl-archive.txt",
 				Continue:       true,
 				IgnoreErrors:   true,
 			},
 			want: []string{
 				"-o", "/videos/%(title)s [%(id)s].%(ext)s",
-				"--download-archive", "/videos/.dotboot-archive.txt",
+				"--download-archive", "/videos/.dotdl-archive.txt",
 				"--continue", "--ignore-errors", "--newline",
 				"https://youtu.be/abc", "https://x.com/u/status/1",
 			},

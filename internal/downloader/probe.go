@@ -9,7 +9,7 @@ import (
 	"strings"
 )
 
-// mediaInfo is what dotboot needs to know about a file, read with a single
+// mediaInfo is what dotdl needs to know about a file, read with a single
 // ffprobe run. Missing streams leave their fields empty: an empty VCodec is a
 // file without video (audio only), an empty ACodec a silent video.
 type mediaInfo struct {

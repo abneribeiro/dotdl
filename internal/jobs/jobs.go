@@ -1,4 +1,4 @@
-// Package jobs is dotboot's engine: it validates a download request, runs it
+// Package jobs is dotdl's engine: it validates a download request, runs it
 // and reports progress as events. It never writes to the terminal; the
 // caller decides how to show each Event.
 package jobs
@@ -10,7 +10,7 @@ import (
 	"os"
 	"time"
 
-	"github.com/abneribeiro/dotboot/internal/config"
+	"github.com/abneribeiro/dotdl/internal/config"
 )
 
 // ErrPartial means part of the work finished and part failed, which is
@@ -88,7 +88,7 @@ func PrepareOutputDir(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return outputDirError(dir, err)
 	}
-	f, err := os.CreateTemp(dir, ".dotboot-check-*")
+	f, err := os.CreateTemp(dir, ".dotdl-check-*")
 	if err != nil {
 		return outputDirError(dir, err)
 	}
@@ -98,9 +98,9 @@ func PrepareOutputDir(dir string) error {
 }
 
 // outputDirError explains the failure. Inside Docker (the image sets
-// DOTBOOT_DOCKER) only the folders the wrapper mounted at start are visible.
+// DOTDL_DOCKER) only the folders the wrapper mounted at start are visible.
 func outputDirError(dir string, err error) error {
-	if os.Getenv("DOTBOOT_DOCKER") != "" && (errors.Is(err, fs.ErrPermission) || errors.Is(err, fs.ErrNotExist)) {
+	if os.Getenv("DOTDL_DOCKER") != "" && (errors.Is(err, fs.ErrPermission) || errors.Is(err, fs.ErrNotExist)) {
 		return fmt.Errorf("cannot write to %s: %w (in Docker only your home, the Windows drives under /mnt "+
 			"and the configured output folder are visible)", dir, err)
 	}

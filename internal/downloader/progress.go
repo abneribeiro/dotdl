@@ -47,7 +47,7 @@ func (p Progress) Fraction() float64 {
 
 // progressMarker tags the --progress-template lines so they are not mistaken
 // for the rest of the output.
-const progressMarker = "dotboot-progress"
+const progressMarker = "dotdl-progress"
 
 // progressTemplate makes yt-dlp print an easy-to-parse line on every update:
 // bytes, total, estimated total, speed and ETA ("NA" when unknown).

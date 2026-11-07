@@ -13,10 +13,10 @@ func TestParseLineProgress(t *testing.T) {
 		wantETA  time.Duration
 		wantSpd  float64
 	}{
-		{"known total", "dotboot-progress 5242880 10485760 NA 1048576.5 5", 0.5, 5 * time.Second, 1048576.5},
+		{"known total", "dotdl-progress 5242880 10485760 NA 1048576.5 5", 0.5, 5 * time.Second, 1048576.5},
 		// HLS/DASH: only an estimated total.
-		{"estimate only", "dotboot-progress 250 NA 1000.0 NA NA", 0.25, -1, 0},
-		{"unknown total", "dotboot-progress 250 NA NA NA NA", -1, -1, 0},
+		{"estimate only", "dotdl-progress 250 NA 1000.0 NA NA", 0.25, -1, 0},
+		{"unknown total", "dotdl-progress 250 NA NA NA NA", -1, -1, 0},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -54,7 +54,7 @@ func TestParseLinePhases(t *testing.T) {
 		}
 	}
 
-	for _, line := range []string{"[youtube] abc: Downloading webpage", "", "dotboot-progress 1 2"} {
+	for _, line := range []string{"[youtube] abc: Downloading webpage", "", "dotdl-progress 1 2"} {
 		if _, ok := ParseLine(line); ok {
 			t.Errorf("ParseLine(%q) should be ignored", line)
 		}

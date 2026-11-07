@@ -1,18 +1,18 @@
-# GoReleaser: dotboot binaries for every system, published as a GitHub
+# GoReleaser: dotdl binaries for every system, published as a GitHub
 # release when a vX.Y.Z tag is pushed (see .github/workflows/release.yml).
 # Locally, without publishing: make release-snapshot.
 version: 2
 
-project_name: dotboot
+project_name: dotdl
 
 before:
   hooks:
     - go mod verify
 
 builds:
-  - id: dotboot
-    main: ./cmd/dotboot
-    binary: dotboot
+  - id: dotdl
+    main: ./cmd/dotdl
+    binary: dotdl
     env:
       - CGO_ENABLED=0
     flags:
@@ -23,7 +23,7 @@ builds:
     goarch: [amd64, arm64]
 
 archives:
-  - id: dotboot
+  - id: dotdl
     formats: [tar.gz]
     format_overrides:
       - goos: windows

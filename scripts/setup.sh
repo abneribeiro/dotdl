@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Guided setup after cloning (make setup): leaves dotboot ready to use.
+# Guided setup after cloning (make setup): leaves dotdl ready to use.
 #
 #   make setup                         asks at each step
 #   make setup YES=1 INSTALL=docker    no questions (INSTALL=docker|native)
@@ -84,16 +84,16 @@ step "3/4 Output folder"
 if [ "$interactive" = 1 ]; then
 	read -r -p "Where should downloads go? (empty = the current folder each time) " output
 	if [ -n "$output" ]; then
-		"$BINDIR/dotboot" config output "$output"
+		"$BINDIR/dotdl" config output "$output"
 	fi
 else
-	echo "  Skipped. Set it later with: dotboot config output <folder>"
+	echo "  Skipped. Set it later with: dotdl config output <folder>"
 fi
 
 step "4/4 Doctor"
 # doctor exits with 1 when something is missing: the report says what.
-"$BINDIR/dotboot" doctor || true
+"$BINDIR/dotdl" doctor || true
 
 echo
-echo "Done. Try: dotboot video https://youtu.be/xxxx"
+echo "Done. Try: dotdl video https://youtu.be/xxxx"
 echo "(if the command is not found, add $BINDIR to your PATH)"

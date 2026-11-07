@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Installs the native dotboot's dependencies:
+# Installs the native dotdl's dependencies:
 #   - yt-dlp and deno into BINDIR (default ~/.local/bin), without sudo,
 #     verified against the checksum each release publishes;
 #   - ffmpeg/ffprobe with the system's package manager (asks before using

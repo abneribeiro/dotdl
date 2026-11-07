@@ -11,7 +11,7 @@ import (
 	"testing"
 	"time"
 
-	"github.com/abneribeiro/dotboot/internal/downloader"
+	"github.com/abneribeiro/dotdl/internal/downloader"
 )
 
 // fakeBin installs an executable with the given sh script on the test PATH.
@@ -45,8 +45,8 @@ while [ $# -gt 0 ]; do
 done
 file=$(echo "$out" | sed "s/%(title)s/Test/; s/%(id)s/abc/; s/%(ext)s/$ext/")
 echo "[download] Destination: $file"
-echo "dotboot-progress 512 1024 NA 2048.0 3"
-echo "dotboot-progress 1024 1024 NA 2048.0 0"
+echo "dotdl-progress 512 1024 NA 2048.0 3"
+echo "dotdl-progress 1024 1024 NA 2048.0 0"
 echo "WARNING: just a warning" >&2
 printf 'x' > "$file"
 [ -n "$print" ] && echo "$file" >> "$print"
@@ -111,7 +111,7 @@ func TestDownloadRunWithFakeBinaries(t *testing.T) {
 			t.Errorf("missing: %s", name)
 		}
 	}
-	if c.has(func(e Event) bool { return strings.Contains(e.Log, "dotboot-progress") }) {
+	if c.has(func(e Event) bool { return strings.Contains(e.Log, "dotdl-progress") }) {
 		t.Error("template lines must not reach the log")
 	}
 }
@@ -220,7 +220,7 @@ func TestPrepareOutputDir(t *testing.T) {
 			if tt.dir == readOnly && os.Geteuid() == 0 {
 				t.Skip("root writes to read-only folders")
 			}
-			t.Setenv("DOTBOOT_DOCKER", "1")
+			t.Setenv("DOTDL_DOCKER", "1")
 			err := PrepareOutputDir(tt.dir)
 			if (err != nil) != tt.wantErr {
 				t.Fatalf("PrepareOutputDir(%q) = %v, want error: %v", tt.dir, err, tt.wantErr)
@@ -231,7 +231,7 @@ func TestPrepareOutputDir(t *testing.T) {
 			if err == nil {
 				entries, _ := os.ReadDir(tt.dir)
 				for _, e := range entries {
-					if strings.HasPrefix(e.Name(), ".dotboot-check-") {
+					if strings.HasPrefix(e.Name(), ".dotdl-check-") {
 						t.Errorf("the check file %s was left behind", e.Name())
 					}
 				}

@@ -13,27 +13,27 @@ import (
 	"strings"
 	"sync"
 
-	"github.com/abneribeiro/dotboot/internal/config"
-	"github.com/abneribeiro/dotboot/internal/downloader"
+	"github.com/abneribeiro/dotdl/internal/config"
+	"github.com/abneribeiro/dotdl/internal/downloader"
 )
 
 const (
 	// archiveFileName records the videos already downloaded into the output
 	// folder; repeating a request skips them and carries on with the rest.
-	archiveFileName = ".dotboot-archive.txt"
+	archiveFileName = ".dotdl-archive.txt"
 
 	// audioArchiveFileName is the archive for audio-only downloads. It must
 	// be a separate file: the archive records the video ID, not the format,
 	// and with a single file a video already saved as MP4 never came out as
 	// MP3.
-	audioArchiveFileName = ".dotboot-archive-audio.txt"
+	audioArchiveFileName = ".dotdl-archive-audio.txt"
 
 	// pendingFileName lists the files yt-dlp finished that have not been
 	// through the MP4 conversion yet. It lives in the output folder, not in a
 	// temp file, because the archive records a video BEFORE the conversion:
 	// a Ctrl+C in between left the .webm forever, since the next run skipped
 	// the video. It is deleted only once everything it lists is converted.
-	pendingFileName = ".dotboot-pending.txt"
+	pendingFileName = ".dotdl-pending.txt"
 
 	// maxH264Height is the resolution above which the big sites (YouTube in
 	// particular) stop offering H.264: past it, guaranteeing an MP4 means
@@ -87,7 +87,7 @@ func (d *Download) Audio() bool {
 	return slices.Contains(AudioFormats, d.Format)
 }
 
-// NewDownload validates the request. outputBase is DOTBOOT_OUTPUT_DIR.
+// NewDownload validates the request. outputBase is DOTDL_OUTPUT_DIR.
 func NewDownload(in DownloadInput, outputBase string) (*Download, error) {
 	d := &Download{URLs: in.URLs, BatchFile: in.BatchFile, Cookies: in.Cookies}
 
@@ -155,7 +155,7 @@ func NewDownload(in DownloadInput, outputBase string) (*Download, error) {
 	return d, nil
 }
 
-// ResolveOutputDir applies the base folder (DOTBOOT_OUTPUT_DIR) to an -o
+// ResolveOutputDir applies the base folder (DOTDL_OUTPUT_DIR) to an -o
 // value: empty uses the base, a relative path goes inside it, an absolute
 // path ignores it. Without a base, a relative -o is relative to the current
 // folder and no -o means the current folder. A leading "~" is expanded.
@@ -323,7 +323,7 @@ func (d *Download) Run(ctx context.Context, env Env, report Reporter) (Result, e
 	if d.Format == FormatMP4 {
 		opts.PrintToFile = filepath.Join(d.OutputDir, pendingFileName)
 	} else {
-		tmp, err := os.CreateTemp(env.TempDir, "dotboot-files-*.txt")
+		tmp, err := os.CreateTemp(env.TempDir, "dotdl-files-*.txt")
 		if err != nil {
 			return res, fmt.Errorf("cannot create the file list: %w", err)
 		}

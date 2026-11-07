@@ -11,8 +11,8 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/abneribeiro/dotboot/internal/config"
-	"github.com/abneribeiro/dotboot/internal/jobs"
+	"github.com/abneribeiro/dotdl/internal/config"
+	"github.com/abneribeiro/dotdl/internal/jobs"
 )
 
 // testApp returns an App writing to buffers, in plain (non-interactive)
@@ -100,7 +100,7 @@ func TestRunCommands(t *testing.T) {
 		wantStdout string
 		wantStderr string
 	}{
-		{nil, ExitOK, "dotboot <command>", ""},
+		{nil, ExitOK, "dotdl <command>", ""},
 		{[]string{"help"}, ExitOK, "Commands", ""},
 		{[]string{"help", "video"}, ExitOK, "--quality", ""},
 		{[]string{"video", "--help"}, ExitOK, "--original", ""},

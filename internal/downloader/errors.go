@@ -75,11 +75,11 @@ func (e *DownloadError) Hint() string {
 	switch e.Kind {
 	case ErrLoginRequired:
 		return "export cookies from a browser where you are logged in and pass them with --cookies " +
-			"(or set them once with: dotboot config cookies <file>)"
+			"(or set them once with: dotdl config cookies <file>)"
 	case ErrRateLimited:
 		return "wait a few minutes, or pass cookies with --cookies"
 	case ErrUnknown:
-		return "if a site that used to work stopped working, yt-dlp is probably outdated (dotboot doctor)"
+		return "if a site that used to work stopped working, yt-dlp is probably outdated (dotdl doctor)"
 	}
 	return ""
 }

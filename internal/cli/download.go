@@ -8,9 +8,9 @@ import (
 	"os/exec"
 	"slices"
 
-	"github.com/abneribeiro/dotboot/internal/downloader"
-	"github.com/abneribeiro/dotboot/internal/jobs"
-	"github.com/abneribeiro/dotboot/internal/ui"
+	"github.com/abneribeiro/dotdl/internal/downloader"
+	"github.com/abneribeiro/dotdl/internal/jobs"
+	"github.com/abneribeiro/dotdl/internal/ui"
 )
 
 // kind is what a download command keeps: the video or only the audio.
@@ -26,7 +26,7 @@ const (
 var requiredTools = []string{"yt-dlp", "ffmpeg", "ffprobe"}
 
 var videoHelp = ui.Help{
-	Usage:       "dotboot video [flags] <url>...",
+	Usage:       "dotdl video [flags] <url>...",
 	Description: "download videos as MP4 (H.264 + AAC) that plays on iPhone, Android, Windows and macOS",
 	Sections: []ui.HelpSection{
 		{Title: "Flags", Rows: [][2]string{
@@ -39,9 +39,9 @@ var videoHelp = ui.Help{
 			{"--cookies <file>", "Netscape cookies for videos behind a login or a bot check"},
 		}},
 		{Title: "Examples", Rows: [][2]string{
-			{"dotboot video https://youtu.be/xxxx", ""},
-			{"dotboot video -q 1080 -o ~/Videos https://youtube.com/playlist?list=yyyy", ""},
-			{"dotboot video --start 01:30 --end 02:00 https://x.com/user/status/123", ""},
+			{"dotdl video https://youtu.be/xxxx", ""},
+			{"dotdl video -q 1080 -o ~/Videos https://youtube.com/playlist?list=yyyy", ""},
+			{"dotdl video --start 01:30 --end 02:00 https://x.com/user/status/123", ""},
 		}},
 	},
 	Footer: "The quality is the short side, so 720 on a vertical video gives 720x1280.\n" +
@@ -49,7 +49,7 @@ var videoHelp = ui.Help{
 }
 
 var audioHelp = ui.Help{
-	Usage:       "dotboot audio [flags] <url>...",
+	Usage:       "dotdl audio [flags] <url>...",
 	Description: "download audio as MP3 or M4A with title, artist and cover art",
 	Sections: []ui.HelpSection{
 		{Title: "Flags", Rows: [][2]string{
@@ -61,14 +61,14 @@ var audioHelp = ui.Help{
 			{"--cookies <file>", "Netscape cookies for content behind a login or a bot check"},
 		}},
 		{Title: "Examples", Rows: [][2]string{
-			{"dotboot audio https://youtu.be/xxxx", ""},
-			{"dotboot audio -f m4a -o music https://soundcloud.com/artist/track", ""},
+			{"dotdl audio https://youtu.be/xxxx", ""},
+			{"dotdl audio -f m4a -o music https://soundcloud.com/artist/track", ""},
 		}},
 	},
 }
 
 // parseDownload reads a video or audio command's flags and validates the
-// request. outputBase is DOTBOOT_OUTPUT_DIR. It returns flag.ErrHelp when
+// request. outputBase is DOTDL_OUTPUT_DIR. It returns flag.ErrHelp when
 // the help was asked for.
 func parseDownload(k kind, args []string, outputBase string) (*jobs.Download, error) {
 	var in jobs.DownloadInput
@@ -114,12 +114,12 @@ func (a *App) download(ctx context.Context, k kind, args []string) int {
 		return ExitOK
 	}
 	if err != nil {
-		ui.PrintUsageError(a.Stderr, err, "dotboot help "+string(k))
+		ui.PrintUsageError(a.Stderr, err, "dotdl help "+string(k))
 		return ExitUsage
 	}
 	for _, tool := range requiredTools {
 		if _, err := exec.LookPath(tool); err != nil {
-			ui.PrintError(a.Stderr, fmt.Errorf("%s is not installed (run dotboot doctor to see what is missing)", tool))
+			ui.PrintError(a.Stderr, fmt.Errorf("%s is not installed (run dotdl doctor to see what is missing)", tool))
 			return ExitFailure
 		}
 	}
@@ -176,7 +176,7 @@ func title(d *jobs.Download) string {
 // pickJSRuntime returns the --js-runtimes value for yt-dlp, which solves
 // YouTube's JavaScript challenges with it. Deno is yt-dlp's default and needs
 // no flag (""); node is only used when asked for, so it is enabled when it
-// is the only one. Without either, dotboot doctor reports it.
+// is the only one. Without either, dotdl doctor reports it.
 func pickJSRuntime(lookPath func(string) (string, error)) string {
 	if _, err := lookPath("deno"); err == nil {
 		return ""

@@ -1,4 +1,4 @@
-// Package doctor checks that the environment has what dotboot needs and says
+// Package doctor checks that the environment has what dotdl needs and says
 // how to fix what is missing. It is the first thing to run when a download
 // fails for no clear reason.
 package doctor
@@ -14,7 +14,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/abneribeiro/dotboot/internal/config"
+	"github.com/abneribeiro/dotdl/internal/config"
 )
 
 // Level is how bad a check result is.
@@ -153,7 +153,7 @@ func ffmpegInstall(goos string) string {
 func checkJSRuntime(ctx context.Context, cfg *config.Config, sys system) Check {
 	c := Check{Name: "JavaScript"}
 	if cfg.JSRuntimes != "" {
-		c.Detail = cfg.JSRuntimes + " (DOTBOOT_JS_RUNTIMES)"
+		c.Detail = cfg.JSRuntimes + " (DOTDL_JS_RUNTIMES)"
 		return c
 	}
 	if _, err := sys.lookPath("deno"); err == nil {
@@ -202,9 +202,9 @@ func checkOutputDir(cfg *config.Config) Check {
 	case err != nil:
 		c.Level, c.Fix = LevelWarn, err.Error()
 	case !info.IsDir():
-		c.Level, c.Fix = LevelFail, "DOTBOOT_OUTPUT_DIR points to a file"
+		c.Level, c.Fix = LevelFail, "DOTDL_OUTPUT_DIR points to a file"
 	case !writable(dir):
-		c.Level, c.Fix = LevelWarn, "not writable: run dotboot config output <folder>, or use -o"
+		c.Level, c.Fix = LevelWarn, "not writable: run dotdl config output <folder>, or use -o"
 	}
 	return c
 }
@@ -214,11 +214,11 @@ func checkTempDir(cfg *config.Config) Check {
 	info, err := os.Stat(cfg.TempDir)
 	switch {
 	case err != nil:
-		c.Level, c.Fix = LevelFail, "DOTBOOT_TEMP_DIR does not exist: "+err.Error()
+		c.Level, c.Fix = LevelFail, "DOTDL_TEMP_DIR does not exist: "+err.Error()
 	case !info.IsDir():
-		c.Level, c.Fix = LevelFail, "DOTBOOT_TEMP_DIR points to a file"
+		c.Level, c.Fix = LevelFail, "DOTDL_TEMP_DIR points to a file"
 	case !writable(cfg.TempDir):
-		c.Level, c.Fix = LevelFail, "DOTBOOT_TEMP_DIR is not writable"
+		c.Level, c.Fix = LevelFail, "DOTDL_TEMP_DIR is not writable"
 	}
 	return c
 }
@@ -226,7 +226,7 @@ func checkTempDir(cfg *config.Config) Check {
 // writable confirms writing by creating and deleting a file: permissions
 // alone can lie (ACLs, read-only file systems).
 func writable(dir string) bool {
-	f, err := os.CreateTemp(dir, ".dotboot-doctor-*")
+	f, err := os.CreateTemp(dir, ".dotdl-doctor-*")
 	if err != nil {
 		return false
 	}

@@ -1,9 +1,9 @@
-// Package config loads dotboot's configuration from environment variables,
+// Package config loads dotdl's configuration from environment variables,
 // with sensible defaults. Invalid values are errors, never a silent
 // fallback.
 //
 // Variables can come from the environment, from a .env in the current folder
-// or from the global ~/.config/dotboot/config.env (see LoadFiles), in that
+// or from the global ~/.config/dotdl/config.env (see LoadFiles), in that
 // order of priority.
 package config
 
@@ -22,27 +22,27 @@ import (
 	"github.com/joho/godotenv"
 )
 
-// Config holds dotboot's settings.
+// Config holds dotdl's settings.
 type Config struct {
-	// OutputDir is the base output folder (DOTBOOT_OUTPUT_DIR): used when -o
+	// OutputDir is the base output folder (DOTDL_OUTPUT_DIR): used when -o
 	// is not given, and the root of a relative -o. An absolute -o ignores it.
 	// Empty means the current folder.
 	OutputDir string
 
-	// TempDir holds the downloads' temporary files (DOTBOOT_TEMP_DIR, default
+	// TempDir holds the downloads' temporary files (DOTDL_TEMP_DIR, default
 	// os.TempDir()).
 	TempDir string
 
-	// LogLevel controls the verbosity (DOTBOOT_LOG_LEVEL: debug|info|warn|error).
+	// LogLevel controls the verbosity (DOTDL_LOG_LEVEL: debug|info|warn|error).
 	LogLevel slog.Level
 
-	// CookiesFile is a Netscape-format cookies file (DOTBOOT_COOKIES_FILE),
+	// CookiesFile is a Netscape-format cookies file (DOTDL_COOKIES_FILE),
 	// passed to yt-dlp with --cookies. It gets past YouTube's "confirm you're
 	// not a bot" check, age restrictions and content behind a login. It must
 	// exist when set.
 	CookiesFile string
 
-	// JSRuntimes is passed to yt-dlp as --js-runtimes (DOTBOOT_JS_RUNTIMES,
+	// JSRuntimes is passed to yt-dlp as --js-runtimes (DOTDL_JS_RUNTIMES,
 	// e.g. "node"). Empty uses yt-dlp's default, Deno; the download commands
 	// pick "node" when Deno is missing and node is there (cli.pickJSRuntime).
 	JSRuntimes string
@@ -50,23 +50,23 @@ type Config struct {
 
 // Environment variable names.
 const (
-	KeyOutputDir   = "DOTBOOT_OUTPUT_DIR"
-	KeyTempDir     = "DOTBOOT_TEMP_DIR"
-	KeyLogLevel    = "DOTBOOT_LOG_LEVEL"
-	KeyCookiesFile = "DOTBOOT_COOKIES_FILE"
-	KeyJSRuntimes  = "DOTBOOT_JS_RUNTIMES"
+	KeyOutputDir   = "DOTDL_OUTPUT_DIR"
+	KeyTempDir     = "DOTDL_TEMP_DIR"
+	KeyLogLevel    = "DOTDL_LOG_LEVEL"
+	KeyCookiesFile = "DOTDL_COOKIES_FILE"
+	KeyJSRuntimes  = "DOTDL_JS_RUNTIMES"
 )
 
 // FilePath returns the global configuration file:
-// $XDG_CONFIG_HOME/dotboot/config.env, or ~/.config/dotboot/config.env.
+// $XDG_CONFIG_HOME/dotdl/config.env, or ~/.config/dotdl/config.env.
 func FilePath() string {
 	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
-		return filepath.Join(dir, "dotboot", "config.env")
+		return filepath.Join(dir, "dotdl", "config.env")
 	}
 	if dir, err := os.UserConfigDir(); err == nil {
-		return filepath.Join(dir, "dotboot", "config.env")
+		return filepath.Join(dir, "dotdl", "config.env")
 	}
-	return filepath.Join(os.TempDir(), "dotboot", "config.env")
+	return filepath.Join(os.TempDir(), "dotdl", "config.env")
 }
 
 // LoadFiles loads ./.env and then the global file into the environment.
