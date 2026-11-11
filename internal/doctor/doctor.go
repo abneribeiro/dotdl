@@ -43,6 +43,10 @@ const (
 	// commandTimeout caps each "--version": the standalone yt-dlp is slow to
 	// start the first time, while it unpacks.
 	commandTimeout = 30 * time.Second
+
+	// installDeps is how to get yt-dlp, deno and ffmpeg, for both ways of
+	// installing dotdl: the release installer and a clone.
+	installDeps = "rerun the installer with DOTDL_DEPS=1 (from a clone: make deps)"
 )
 
 // system abstracts the system so tests do not depend on the real PATH.
@@ -94,12 +98,12 @@ func collect(ctx context.Context, cfg *config.Config, sys system) []Check {
 func checkYtdlp(ctx context.Context, sys system) Check {
 	c := Check{Name: "yt-dlp"}
 	if _, err := sys.lookPath("yt-dlp"); err != nil {
-		c.Level, c.Detail, c.Fix = LevelFail, "not found", "make deps (installs into ~/.local/bin)"
+		c.Level, c.Detail, c.Fix = LevelFail, "not found", installDeps
 		return c
 	}
 	out, err := sys.output(ctx, "yt-dlp", "--version")
 	if err != nil {
-		c.Level, c.Detail, c.Fix = LevelFail, "does not start: "+firstLine(out), "make deps"
+		c.Level, c.Detail, c.Fix = LevelFail, "does not start: "+firstLine(out), installDeps
 		return c
 	}
 
@@ -114,7 +118,7 @@ func checkYtdlp(ctx context.Context, sys system) Check {
 	if age > ytdlpMaxAge {
 		// YouTube changes often and yt-dlp keeps up: an old version is the
 		// most common reason downloads stop working.
-		c.Level, c.Fix = LevelWarn, "yt-dlp -U (or make deps); for the Docker image: make update-ytdlp"
+		c.Level, c.Fix = LevelWarn, "yt-dlp -U, or "+installDeps+"; for the Docker image: make update-ytdlp"
 	}
 	return c
 }
@@ -124,7 +128,7 @@ func checkYtdlp(ctx context.Context, sys system) Check {
 func checkTool(ctx context.Context, sys system, name, prefix string) Check {
 	c := Check{Name: name}
 	if _, err := sys.lookPath(name); err != nil {
-		c.Level, c.Detail, c.Fix = LevelFail, "not found", "make deps (or: "+ffmpegInstall(runtime.GOOS)+")"
+		c.Level, c.Detail, c.Fix = LevelFail, "not found", ffmpegInstall(runtime.GOOS)+", or "+installDeps
 		return c
 	}
 	out, err := sys.output(ctx, name, "-version")
@@ -168,7 +172,7 @@ func checkJSRuntime(ctx context.Context, cfg *config.Config, sys system) Check {
 	}
 	c.Level = LevelWarn
 	c.Detail = "no runtime (deno or node): YouTube may fail or offer fewer formats"
-	c.Fix = "make deps (installs deno)"
+	c.Fix = "install deno: " + installDeps
 	return c
 }
 
