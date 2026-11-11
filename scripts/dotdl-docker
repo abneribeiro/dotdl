@@ -68,7 +68,18 @@ config_value() {
 	while IFS= read -r line || [ -n "$line" ]; do
 		case "$line" in "$key="*) value=${line#*=} ;; esac
 	done <"$file"
-	case "$value" in \"*\") value=${value:1:-1} value=${value//\\\"/\"} value=${value//\\\\/\\} ;; esac
+	# Undoes what config.Save escapes inside double quotes. The escapes go
+	# through variables: bash 3.2 (macOS) keeps a literal backslash otherwise.
+	local quote='"' dollar='$' backslash=\\
+	case "$value" in
+	\"*\")
+		value=${value#\"}
+		value=${value%\"}
+		value=${value//\\\"/$quote}
+		value=${value//\\\$/$dollar}
+		value=${value//\\\\/$backslash}
+		;;
+	esac
 	# shellcheck disable=SC2088 # the ~ is literal here and expanded by hand
 	case "$value" in "~" | "~/"*) value=$HOME${value:1} ;; esac
 	printf '%s' "$value"
@@ -77,6 +88,15 @@ config_value() {
 # setting returns a setting with dotdl's priority: environment, ./.env,
 # then ~/.config/dotdl/config.env.
 config_file=${XDG_CONFIG_HOME:-$HOME/.config}/dotdl/config.env
+# The container must look for config.env where the host has it.
+case "${XDG_CONFIG_HOME:-}" in
+/*)
+	docker_args+=(-e XDG_CONFIG_HOME="$XDG_CONFIG_HOME")
+	if mkdir -p "$XDG_CONFIG_HOME/dotdl" 2>/dev/null; then
+		mount_same "$XDG_CONFIG_HOME/dotdl"
+	fi
+	;;
+esac
 setting() {
 	local key=$1 value=${!1:-}
 	[ -n "$value" ] || value=$(config_value "$key" .env)
