@@ -10,14 +10,12 @@ import (
 	"os/exec"
 	"path/filepath"
 	"strings"
-	"time"
 
 	"github.com/abneribeiro/dotdl/internal/procio"
 )
 
-// The pair every iPhone, iPad, Android phone, Windows and macOS machine plays
-// natively, with no extra app. Every video this package delivers goes
-// through here first.
+// H.264 + AAC in an MP4 is what every iPhone, Android phone, Windows and
+// macOS machine plays natively.
 const (
 	mp4Ext        = ".mp4"
 	mp4VideoCodec = "h264"
@@ -40,9 +38,9 @@ const (
 	// Windows and macOS device decodes in hardware.
 	compatProfile = "high"
 
-	// evenDimensions rounds width and height to even numbers: libx264 in
-	// yuv420p rejects odd sizes, which show up in hand-cropped videos
-	// (TikTok, Instagram), and the conversion used to fail.
+	// evenDimensions rounds width and height down to even numbers: libx264
+	// in yuv420p rejects odd sizes, which show up in hand-cropped videos
+	// (TikTok, Instagram).
 	evenDimensions = "scale=trunc(iw/2)*2:trunc(ih/2)*2"
 
 	// compatAudioKbps is generous on purpose: audio is a small part of the
@@ -50,12 +48,9 @@ const (
 	compatAudioKbps = "192k"
 )
 
-// mp4Compatible reports whether a file with these attributes already plays on
-// any phone without conversion. It is pure: this is where "compatible" is
-// defined, and what the tests pin down.
-//
-// An empty acodec means a silent video, which is compatible: there is no
-// audio stream to be incompatible.
+// mp4Compatible reports whether a file with these attributes already plays
+// on any phone without conversion. An empty acodec is a silent video, which
+// is compatible.
 func mp4Compatible(ext, vcodec, acodec, pixFmt string) bool {
 	if strings.ToLower(ext) != mp4Ext {
 		return false
@@ -79,7 +74,7 @@ func audioCompatible(acodec string) bool {
 
 // compatArgs builds the ffmpeg arguments that make the file compliant,
 // copying every stream that is already right: a .webm with H.264/AAC is
-// remuxed in seconds instead of re-encoded for minutes. Pure, like BuildArgs.
+// remuxed in seconds instead of re-encoded for minutes.
 func compatArgs(inputPath, outputPath, vcodec, acodec, pixFmt string) []string {
 	// The explicit -map drops what MP4 refuses (WebVTT subtitles, data
 	// streams), which would otherwise make ffmpeg abort. The "?" on audio
@@ -138,7 +133,8 @@ func moovFirstIn(r io.ReaderAt) (bool, error) {
 		case "mdat":
 			return false, nil
 		}
-		if size == 1 { // a 64-bit size follows the type
+		// A size of 1 means the real, 64-bit, size follows the type.
+		if size == 1 {
 			if _, err := r.ReadAt(header[8:16], offset+8); err != nil {
 				return false, err
 			}
@@ -164,10 +160,10 @@ type ConvertHooks struct {
 // the index at the front. It returns the path to use: path itself when it was
 // already compliant, or the converted file, which replaces the original.
 //
-// It is the second of the two layers that guarantee the format. The first
-// asks yt-dlp for H.264/AAC (see MP4Sort), which handles the common case for
-// free; this one catches the rest. YouTube above 1080p only has VP9/AV1, and
-// no -S changes that.
+// The format is guaranteed in two layers. The first asks yt-dlp for
+// H.264/AAC (see MP4Sort), which covers the common case without re-encoding;
+// this is the second, for what the site did not have: YouTube above 1080p
+// only serves VP9/AV1, and no -S changes that.
 func EnsureMP4(ctx context.Context, path string, hooks ConvertHooks) (string, error) {
 	info, err := probeMedia(ctx, path)
 	if err != nil {
@@ -218,8 +214,7 @@ func EnsureMP4(ctx context.Context, path string, hooks ConvertHooks) (string, er
 	}
 
 	cmd := exec.CommandContext(ctx, "ffmpeg", args...)
-	cmd.Cancel = func() error { return cmd.Process.Signal(os.Interrupt) }
-	cmd.WaitDelay = 10 * time.Second
+	interruptOnCancel(cmd)
 	stderr := &procio.TailBuffer{Max: 4096}
 	cmd.Stderr = stderr
 	stdout := procio.NewLineWriter(func(line string) {
