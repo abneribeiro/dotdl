@@ -22,7 +22,9 @@ IMAGE ?= dotdl:latest
 
 VERSION := $(shell git describe --tags --always --dirty 2>/dev/null || echo dev)
 COMMIT  := $(shell git rev-parse --short HEAD 2>/dev/null)
-DATE    := $(shell date -u +%Y-%m-%dT%H:%M:%SZ)
+# The commit's date, not the build's: the same commit gives the same binary,
+# and the image's build layer stays cached between builds.
+DATE    := $(shell git log -1 --format=%cI 2>/dev/null || date -u +%Y-%m-%dT%H:%M:%SZ)
 LDFLAGS := -s -w -X main.version=$(VERSION) -X main.commit=$(COMMIT) -X main.date=$(DATE)
 
 GORELEASER_IMAGE ?= goreleaser/goreleaser:v2.19.0
@@ -79,8 +81,8 @@ install-docker: ## Install the wrapper that runs dotdl in Docker (DOCKER_CLI_NAM
 	@echo "Installed $(BINDIR)/$(DOCKER_CLI_NAME), which runs the $(IMAGE) image (make docker-build)."
 	@$(path_hint)
 
-uninstall: ## Remove dotdl from BINDIR
-	rm -f "$(BINDIR)/$(BINARY)"
+uninstall: ## Remove dotdl (the binary or the Docker wrapper) from BINDIR
+	rm -f "$(BINDIR)/$(BINARY)" "$(BINDIR)/$(DOCKER_CLI_NAME)"
 
 ##@ Quality
 
@@ -110,7 +112,7 @@ test-integration: ## Integration tests on the host (needs yt-dlp, ffmpeg and the
 	go test -tags integration -v -timeout 30m ./internal/downloader
 
 test-integration-docker: docker-build ## Integration tests inside the image (real downloads)
-	CGO_ENABLED=0 go test -c -tags integration -o $(BIN_DIR)/downloader.test ./internal/downloader
+	CGO_ENABLED=0 GOOS=linux go test -c -tags integration -o $(BIN_DIR)/downloader.test ./internal/downloader
 	docker run --rm --entrypoint /tests/downloader.test \
 		-v "$(CURDIR)/$(BIN_DIR):/tests:ro" $(IMAGE) \
 		-test.v -test.timeout 20m $(if $(RUN),-test.run '$(RUN)')
