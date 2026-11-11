@@ -6,8 +6,10 @@ dotdl config cookies ~/cookies.txt   # cookies for every download
 dotdl config cookies ""              # clear a setting
 ```
 
-stored in `~/.config/dotdl/config.env`. environment variables, and a `.env`
-in the current folder, take priority:
+stored in `~/.config/dotdl/config.env` (`%AppData%\dotdl\config.env` on
+windows; `$XDG_CONFIG_HOME/dotdl/config.env` when that variable is set).
+environment variables, and the `DOTDL_*` lines of a `.env` in the current
+folder, take priority:
 
 | variable | meaning | default |
 |---|---|---|

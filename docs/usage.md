@@ -5,6 +5,7 @@ dotdl video [flags] <url>...    Download videos as MP4
 dotdl audio [flags] <url>...    Download audio as MP3 or M4A
 dotdl doctor                    Check yt-dlp, FFmpeg and Deno
 dotdl config [key] [value]      Show or change the settings
+dotdl version                   Print the version
 dotdl help <command>            Show a command's flags
 dotdl <url>                     Same as dotdl video <url>
 ```
@@ -28,6 +29,11 @@ dotdl video -a urls.txt                                            # one URL per
 | `-f, --format mp3\|m4a` | audio only; default `mp3` |
 
 flags can go before or after the urls. in zsh, quote urls that contain `?`.
+
+running the same command again skips what is done and resumes what was
+interrupted. dotdl keeps track in hidden files in the output folder:
+`.dotdl-archive.txt` (videos), `.dotdl-archive-audio.txt` (audio) and
+`.dotdl-pending.txt` (files still to convert to mp4).
 
 **why 1080p is the sweet spot**: up to 1080p youtube serves h.264, so the mp4
 needs no conversion. above it only vp9/av1 exist, and dotdl converts them,

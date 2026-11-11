@@ -48,9 +48,9 @@ git clone https://github.com/abneribeiro/dotdl && cd dotdl
 make docker-build && make install-docker
 ```
 
-the image takes about 1 gb. for an open-source engine on macos, use colima
-instead (`brew install colima docker docker-buildx && colima start`); it only
-shares your home, so save downloads inside it (e.g. `-o ~/Videos`).
+for an open-source engine on macos, use colima instead
+(`brew install colima docker docker-buildx && colima start`); it only shares
+your home, so save downloads inside it (e.g. `-o ~/Videos`).
 
 ## **from source**
 

@@ -31,7 +31,7 @@ make build             # bin/dotdl with version ldflags
 make install           # Native binary into ~/.local/bin (PREFIX=… to change)
 make install-docker    # Docker wrapper (scripts/dotdl-docker) as `dotdl`
 make deps              # yt-dlp + deno (checksum-verified) and ffmpeg on the host
-make docker-build      # The image dotdl:latest (~1GB, mostly ffmpeg)
+make docker-build      # The image dotdl:latest
 make update-ytdlp      # Pin the latest yt-dlp in the Dockerfile and rebuild
 make release-snapshot  # GoReleaser in Docker, all platforms into dist/
 ```
@@ -107,14 +107,17 @@ Key invariants to preserve:
   orchestrates, `downloader` runs the tools. `jobs` and `downloader` never
   write to the terminal and never import `cli` or `ui`.
 - **Events, not output**: progress reaches the UI as `jobs.Event` (Stage,
-  Fraction/-1, Speed, ETA, Item, Index/Count, Log). An Event's empty fields
-  mean "unchanged". Reporters may be called from several goroutines; the
-  `reporterSink` serializes them. The UI shows only `WARNING:` lines and
-  dotdl's own notes from the log.
+  Fraction/-1, Speed, ETA, Item, Index/Count, Log, Note). An Event's empty
+  fields mean "unchanged". Reporters may be called from several goroutines;
+  the `reporterSink` serializes them. `Log` is yt-dlp's output, of which the
+  UI shows only the `WARNING:` lines; `Note` is dotdl's own message to the
+  user, always shown.
 - **Ctrl+C**: the progress program handles it as a key and cancels the job's
   context (Bubble Tea runs `WithoutSignalHandler`; signals belong to main).
-  `cmd.Cancel` sends `os.Interrupt` to yt-dlp/ffmpeg with a `WaitDelay`, so
-  `.part` files survive and a rerun resumes. Canceled jobs return
+  `downloader.interruptOnCancel` makes `cmd.Cancel` send `os.Interrupt` to
+  yt-dlp/ffmpeg with a `WaitDelay`, so `.part` files survive and a rerun
+  resumes (Windows cannot signal a process, so there it is killed at once).
+  Canceled jobs return
   `context.Canceled` (exit 130); partial success returns an error wrapping
   `jobs.ErrPartial` plus the Result (exit 1, files still listed).
 - **Output is always MP4 / H.264 8-bit / AAC, with faststart** (video mode):
@@ -137,6 +140,13 @@ Key invariants to preserve:
   Audio uses its own archive (`.dotdl-archive-audio.txt`).
 - **`--print-to-file` implies `--simulate`**: `BuildArgs` always emits
   `--no-simulate` with it.
+- **File names**: `%(title).150B [%(id)s].%(ext)s`. The title is capped in
+  bytes because captions used as titles (Instagram, TikTok, X) overflow the
+  255 bytes of a file name.
+- **M4A avoids a re-encode**: `-f ba[acodec^=mp4a]/ba/b` takes the site's own
+  AAC when there is one; MP3 always re-encodes, so it takes `ba/b`.
+- **`--concurrent-fragments 4`** on every download, for the sites that serve
+  a video in pieces (HLS/DASH).
 
 ### Imports
 
@@ -179,9 +189,17 @@ detail. User-facing output goes through `ui`.
 Env vars parsed in `internal/config` (see `.env.example`):
 `DOTDL_OUTPUT_DIR`, `DOTDL_TEMP_DIR`, `DOTDL_COOKIES_FILE`,
 `DOTDL_JS_RUNTIMES`, `DOTDL_LOG_LEVEL`. Priority: environment > `./.env`
-> `~/.config/dotdl/config.env` (godotenv never overrides). `dotdl config`
-writes the file with `config.Save` (only the given keys, 0600). A leading `~`
-is expanded in every path.
+> the global `config.env`. `config.LoadFiles` only takes the `DOTDL_*` keys
+of those files (a `./.env` may belong to another project, and its other
+variables must not reach yt-dlp) and never overrides a variable that is set.
+A `config.env` that cannot be parsed is an error; a `./.env` is ignored.
+
+The global file is `$XDG_CONFIG_HOME/dotdl/config.env`, by default
+`~/.config/dotdl/config.env` on Linux and macOS (shared by the native and the
+Docker install) and `%AppData%\dotdl\config.env` on Windows
+(`config.FilePath`). `dotdl config` writes it with `config.Save` (only the
+given keys, 0600, paths saved absolute). A leading `~` is expanded in every
+path.
 
 `DOTDL_OUTPUT_DIR` is the **base path**: used when `-o` is absent and the
 root of a relative `-o`; an absolute `-o` ignores it.
@@ -197,9 +215,11 @@ root of a relative `-o`; an absolute `-o` ignores it.
 
 ## Docker
 
-One image, `dotdl:latest` (target `app`, ~1GB, mostly ffmpeg's libraries).
-Base images are written literally in the `FROM` lines so Dependabot can bump
-them.
+One image, `dotdl:latest` (target `app`). ffmpeg and ffprobe are static
+binaries copied from `mwader/static-ffmpeg`: Debian's ffmpeg package brings
+hundreds of libraries and made the image about 1GB. The build needs BuildKit
+(cache mount, `TARGETARCH`). Base images are written literally in the `FROM`
+lines so Dependabot can bump them.
 
 | Stage     | Purpose |
 |-----------|---------|
@@ -207,13 +227,15 @@ them.
 | `builder` | Static binary (`CGO_ENABLED=0`, `-trimpath`, version ldflags) |
 | `tools`   | yt-dlp standalone binary, pinned (`ARG YTDLP_VERSION`), verified against `SHA2-256SUMS` |
 | `deno`    | Deno binary (yt-dlp's JS runtime) |
+| `ffmpeg`  | Static ffmpeg and ffprobe with libx264 (`mwader/static-ffmpeg`) |
 | `app`     | Debian slim + ffmpeg + yt-dlp + deno + binary; non-root user; `ENTRYPOINT /dotdl` |
 
 `scripts/dotdl-docker` runs the image as the calling user with `$HOME`
 mounted at the same path, `-t` when there is a terminal (for the progress
 view), and same-path mounts for absolute paths outside the home: `-o`/
 `--output` values, the output and cookies paths from the environment,
-`./.env` or `config.env`, and every `/mnt/<drive>` on WSL. On macOS the
+`./.env` or `config.env`, `$XDG_CONFIG_HOME/dotdl`, and every `/mnt/<drive>`
+on WSL. It must run on bash 3.2, which is what macOS ships. On macOS the
 engine runs in a VM; with the `colima` context, which shares only the home,
 the wrapper warns when it mounts a path outside it (OrbStack shares more).
 The image sets
@@ -222,9 +244,9 @@ folder.
 
 ## Releases & CI
 
-- `.github/workflows/ci.yml`: gofmt, vet (with/without the integration tag),
-  `go test -race`, cross-compilation for every release target, shellcheck,
-  and an image build on pushes to main.
+- `.github/workflows/ci.yml`: `make check`, cross-compilation for every
+  release target, shellcheck, and on pushes to main an image build followed
+  by `dotdl doctor` inside it.
 - `.github/workflows/release.yml`: a `v*` tag runs GoReleaser
   (`.goreleaser.yaml`): linux/darwin/windows × amd64/arm64 archives with
   README, `.env.example` and `scripts/install-deps.sh`, plus `checksums.txt`.
