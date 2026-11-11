@@ -32,8 +32,11 @@ var (
 )
 
 func main() {
-	config.LoadFiles()
-	cfg, err := config.Load()
+	var cfg *config.Config
+	err := config.LoadFiles()
+	if err == nil {
+		cfg, err = config.Load()
+	}
 	if err != nil {
 		ui.PrintError(os.Stderr, fmt.Errorf("invalid configuration: %w", err))
 		os.Exit(cli.ExitFailure)
@@ -43,7 +46,6 @@ func main() {
 	// Signals are handled only here. After the first one, the next falls back
 	// to the default behavior and ends the process at once.
 	ctx, stop := signal.NotifyContext(context.Background(), os.Interrupt, syscall.SIGTERM)
-	defer stop()
 	context.AfterFunc(ctx, stop)
 
 	code := cli.NewApp(cfg, versionString()).Run(ctx, os.Args[1:])

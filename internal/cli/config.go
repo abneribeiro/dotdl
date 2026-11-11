@@ -4,6 +4,8 @@ import (
 	"errors"
 	"fmt"
 	"os"
+	"path/filepath"
+	"strings"
 
 	"github.com/abneribeiro/dotdl/internal/config"
 	"github.com/abneribeiro/dotdl/internal/ui"
@@ -16,7 +18,8 @@ type setting struct {
 	description string
 	// value reads the effective value from the loaded configuration.
 	value func(*config.Config) string
-	// check validates a new, already expanded, value.
+	// check validates a new value, already expanded to an absolute path;
+	// nil accepts anything.
 	check func(string) error
 }
 
@@ -26,7 +29,6 @@ var settings = []setting{
 		env:         config.KeyOutputDir,
 		description: "Where downloads go when -o is not given (default: the current folder)",
 		value:       func(c *config.Config) string { return c.OutputDir },
-		check:       func(string) error { return nil },
 	},
 	{
 		key:         "cookies",
@@ -73,7 +75,11 @@ func (a *App) config(args []string) int {
 
 	s, ok := findSetting(args[0])
 	if !ok {
-		ui.PrintUsageError(a.Stderr, fmt.Errorf("unknown setting %q (use output or cookies)", args[0]),
+		keys := make([]string, len(settings))
+		for i, s := range settings {
+			keys[i] = s.key
+		}
+		ui.PrintUsageError(a.Stderr, fmt.Errorf("unknown setting %q (use %s)", args[0], strings.Join(keys, " or ")),
 			"dotdl help config")
 		return ExitUsage
 	}
@@ -82,16 +88,22 @@ func (a *App) config(args []string) int {
 		return ExitOK
 	}
 
+	// The path is saved absolute: a relative one would mean a different
+	// folder in every folder dotdl runs from.
 	value := args[1]
 	if value != "" {
 		expanded, err := config.ExpandHome(value, os.Getenv)
 		if err == nil {
+			expanded, err = filepath.Abs(expanded)
+		}
+		if err == nil && s.check != nil {
 			err = s.check(expanded)
 		}
 		if err != nil {
 			ui.PrintError(a.Stderr, fmt.Errorf("invalid %s: %w", s.key, err))
 			return ExitFailure
 		}
+		value = expanded
 	}
 	if err := config.Save(config.FilePath(), map[string]string{s.env: value}); err != nil {
 		ui.PrintError(a.Stderr, err)

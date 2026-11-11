@@ -142,6 +142,20 @@ func TestConfigCommand(t *testing.T) {
 		t.Errorf("config listing (%d):\n%s", code, stdout)
 	}
 
+	// A relative folder is saved absolute: it must not depend on where
+	// dotdl runs later.
+	t.Chdir(t.TempDir())
+	wd, err := os.Getwd()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if code := app.Run(context.Background(), []string{"config", "output", "Videos"}); code != ExitOK {
+		t.Fatalf("config output Videos: %d %s", code, stderr)
+	}
+	if data, _ := os.ReadFile(config.FilePath()); !strings.Contains(string(data), filepath.Join(wd, "Videos")) {
+		t.Errorf("the relative folder was not saved absolute: %q", data)
+	}
+
 	for _, args := range [][]string{
 		{"config", "cookies", "/does/not/exist.txt"},
 		{"config", "speed", "2"},

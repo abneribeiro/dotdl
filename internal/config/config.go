@@ -1,10 +1,9 @@
-// Package config loads dotdl's configuration from environment variables,
-// with sensible defaults. Invalid values are errors, never a silent
-// fallback.
+// Package config loads dotdl's configuration from environment variables.
+// Invalid values are errors, never a silent fallback.
 //
 // Variables can come from the environment, from a .env in the current folder
-// or from the global ~/.config/dotdl/config.env (see LoadFiles), in that
-// order of priority.
+// or from the global config.env (see FilePath and LoadFiles), in that order
+// of priority.
 package config
 
 import (
@@ -16,6 +15,7 @@ import (
 	"maps"
 	"os"
 	"path/filepath"
+	"runtime"
 	"slices"
 	"strings"
 
@@ -36,15 +36,17 @@ type Config struct {
 	// LogLevel controls the verbosity (DOTDL_LOG_LEVEL: debug|info|warn|error).
 	LogLevel slog.Level
 
-	// CookiesFile is a Netscape-format cookies file (DOTDL_COOKIES_FILE),
-	// passed to yt-dlp with --cookies. It gets past YouTube's "confirm you're
-	// not a bot" check, age restrictions and content behind a login. It must
-	// exist when set.
+	// CookiesFile is a Netscape-format cookies file with a browser session
+	// (DOTDL_COOKIES_FILE), passed to yt-dlp with --cookies. It gets past
+	// YouTube's "confirm you're not a bot" check, age restrictions and
+	// content behind a login. It must exist when set.
 	CookiesFile string
 
 	// JSRuntimes is passed to yt-dlp as --js-runtimes (DOTDL_JS_RUNTIMES,
-	// e.g. "node"). Empty uses yt-dlp's default, Deno; the download commands
-	// pick "node" when Deno is missing and node is there (cli.pickJSRuntime).
+	// e.g. "node"): the runtime that solves the JavaScript challenges YouTube
+	// protects its formats with. Empty uses yt-dlp's default, Deno; the
+	// download commands pick "node" when Deno is missing and node is there
+	// (cli.pickJSRuntime).
 	JSRuntimes string
 }
 
@@ -57,24 +59,54 @@ const (
 	KeyJSRuntimes  = "DOTDL_JS_RUNTIMES"
 )
 
-// FilePath returns the global configuration file:
-// $XDG_CONFIG_HOME/dotdl/config.env, or ~/.config/dotdl/config.env.
+// envPrefix is what every dotdl variable starts with.
+const envPrefix = "DOTDL_"
+
+// FilePath returns the global configuration file. It is
+// $XDG_CONFIG_HOME/dotdl/config.env or, without the variable,
+// ~/.config/dotdl/config.env on Linux and macOS (the same file for the native
+// and the Docker install) and %AppData%\dotdl\config.env on Windows.
 func FilePath() string {
-	if dir := os.Getenv("XDG_CONFIG_HOME"); dir != "" {
-		return filepath.Join(dir, "dotdl", "config.env")
+	dir := os.Getenv("XDG_CONFIG_HOME")
+	if dir == "" {
+		if runtime.GOOS == "windows" {
+			// Without a profile folder the path stays relative to the current one.
+			dir, _ = os.UserConfigDir()
+		} else if home, err := os.UserHomeDir(); err == nil {
+			dir = filepath.Join(home, ".config")
+		}
 	}
-	if dir, err := os.UserConfigDir(); err == nil {
-		return filepath.Join(dir, "dotdl", "config.env")
-	}
-	return filepath.Join(os.TempDir(), "dotdl", "config.env")
+	return filepath.Join(dir, "dotdl", "config.env")
 }
 
-// LoadFiles loads ./.env and then the global file into the environment.
-// godotenv never overrides a variable that is already set, so the priority
-// is: environment > ./.env > config.env. Both are optional.
-func LoadFiles() {
-	_ = godotenv.Load(".env")     // optional: only exists in a project
-	_ = godotenv.Load(FilePath()) // optional: only exists once something was configured
+// LoadFiles loads the DOTDL_* variables of ./.env and then of the global
+// file into the environment. A variable that is already set is never
+// overridden, so the priority is: environment > ./.env > config.env. Both
+// files are optional.
+func LoadFiles() error {
+	// A ./.env may belong to another project: its syntax is not ours to judge.
+	local, _ := godotenv.Read(".env")
+	setMissing(local)
+
+	path := FilePath()
+	global, err := godotenv.Read(path)
+	if err != nil && !errors.Is(err, fs.ErrNotExist) {
+		return fmt.Errorf("reading %s: %w", path, err)
+	}
+	setMissing(global)
+	return nil
+}
+
+// setMissing puts the DOTDL_* values that are not in the environment yet
+// into it. The other variables of a .env are not dotdl's to export to
+// yt-dlp and ffmpeg.
+func setMissing(values map[string]string) {
+	for key, value := range values {
+		if _, set := os.LookupEnv(key); set || !strings.HasPrefix(key, envPrefix) {
+			continue
+		}
+		_ = os.Setenv(key, value) // only fails for a malformed key, which the prefix rules out
+	}
 }
 
 // Load reads the configuration from the process environment.
@@ -82,8 +114,7 @@ func Load() (*Config, error) {
 	return loadFrom(os.Getenv)
 }
 
-// loadFrom is the testable implementation of Load, with the environment
-// injected.
+// loadFrom is Load with the environment injected.
 func loadFrom(getenv func(string) string) (*Config, error) {
 	cfg := &Config{
 		OutputDir:   getenv(KeyOutputDir),
@@ -112,8 +143,7 @@ func loadFrom(getenv func(string) string) (*Config, error) {
 		}
 	}
 
-	// The shell only expands ~ on the command line; in a .env it arrived
-	// literally and created a folder named "~".
+	// The shell only expands ~ on the command line: in a .env it is literal.
 	for _, p := range []*string{&cfg.OutputDir, &cfg.TempDir, &cfg.CookiesFile} {
 		expanded, err := ExpandHome(*p, getenv)
 		if err != nil {
@@ -217,10 +247,11 @@ func Save(path string, values map[string]string) error {
 }
 
 // quote wraps a value with spaces or special characters in quotes, so
-// godotenv reads it back as is (e.g. "/home/ana/My Videos").
+// godotenv reads it back as is (e.g. "/home/ana/My Videos"). The "$" is
+// escaped because godotenv expands variables inside double quotes.
 func quote(v string) string {
 	if strings.ContainsAny(v, " \t#\"'\\$") {
-		return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`).Replace(v) + `"`
+		return `"` + strings.NewReplacer(`\`, `\\`, `"`, `\"`, `$`, `\$`).Replace(v) + `"`
 	}
 	return v
 }

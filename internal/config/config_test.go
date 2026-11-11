@@ -4,6 +4,7 @@ import (
 	"log/slog"
 	"os"
 	"path/filepath"
+	"runtime"
 	"strings"
 	"testing"
 
@@ -140,11 +141,82 @@ func TestSave(t *testing.T) {
 	if env[KeyOutputDir] != `/home/ana/My "Best" Videos` {
 		t.Errorf("read back %q", env[KeyOutputDir])
 	}
+
+	// godotenv expands variables: a "$" in a path must survive.
+	if err := Save(path, map[string]string{KeyOutputDir: `/mnt/c/$RECYCLE\bin`}); err != nil {
+		t.Fatal(err)
+	}
+	if env, err = godotenv.Read(path); err != nil {
+		t.Fatal(err)
+	}
+	if env[KeyOutputDir] != `/mnt/c/$RECYCLE\bin` {
+		t.Errorf("read back %q", env[KeyOutputDir])
+	}
 }
 
-func TestFilePathFollowsXDG(t *testing.T) {
+func TestFilePath(t *testing.T) {
 	t.Setenv("XDG_CONFIG_HOME", "/xdg")
 	if got := FilePath(); got != "/xdg/dotdl/config.env" {
-		t.Errorf("FilePath = %q", got)
+		t.Errorf("with XDG_CONFIG_HOME: FilePath = %q", got)
+	}
+
+	// The docs and the Docker wrapper promise ~/.config on Linux and macOS.
+	if runtime.GOOS == "windows" {
+		return
+	}
+	t.Setenv("XDG_CONFIG_HOME", "")
+	t.Setenv("HOME", "/home/ana")
+	if got := FilePath(); got != "/home/ana/.config/dotdl/config.env" {
+		t.Errorf("without XDG_CONFIG_HOME: FilePath = %q", got)
+	}
+}
+
+func TestLoadFiles(t *testing.T) {
+	writeFile := func(path, content string) {
+		t.Helper()
+		if err := os.MkdirAll(filepath.Dir(path), 0o755); err != nil {
+			t.Fatal(err)
+		}
+		if err := os.WriteFile(path, []byte(content), 0o600); err != nil {
+			t.Fatal(err)
+		}
+	}
+	// t.Setenv restores the variables LoadFiles sets when the test ends.
+	for _, key := range []string{KeyOutputDir, KeyTempDir} {
+		t.Setenv(key, "")
+		os.Unsetenv(key)
+	}
+	t.Setenv(KeyLogLevel, "warn")
+	xdg := t.TempDir()
+	t.Setenv("XDG_CONFIG_HOME", xdg)
+	t.Chdir(t.TempDir())
+
+	writeFile(".env", KeyOutputDir+"=/local\n"+KeyLogLevel+"=debug\nFOREIGN_TEST_SECRET=1\n")
+	writeFile(FilePath(), KeyOutputDir+"=/global\n"+KeyTempDir+"=/global-tmp\n")
+	if err := LoadFiles(); err != nil {
+		t.Fatal(err)
+	}
+	for key, want := range map[string]string{
+		KeyLogLevel:  "warn",
+		KeyOutputDir: "/local",
+		KeyTempDir:   "/global-tmp",
+	} {
+		if got := os.Getenv(key); got != want {
+			t.Errorf("%s = %q, want %q", key, got, want)
+		}
+	}
+	if _, set := os.LookupEnv("FOREIGN_TEST_SECRET"); set {
+		t.Error("a variable without the DOTDL_ prefix must not reach the environment")
+	}
+
+	// Another project's .env may not even be a .env; a broken config.env is
+	// dotdl's own file and must be reported.
+	writeFile(".env", "not a dotenv file {\n")
+	if err := LoadFiles(); err != nil {
+		t.Errorf("an unreadable ./.env must be ignored: %v", err)
+	}
+	writeFile(FilePath(), "not a dotenv file {\n")
+	if err := LoadFiles(); err == nil {
+		t.Error("an unreadable config.env must be an error")
 	}
 }
