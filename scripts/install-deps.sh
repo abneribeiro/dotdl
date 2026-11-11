@@ -12,6 +12,8 @@
 set -euo pipefail
 
 YTDLP_VERSION=${YTDLP_VERSION:-latest}
+# Keep in step with the Dockerfile's denoland/deno image, which Dependabot
+# bumps on its own.
 DENO_VERSION=${DENO_VERSION:-2.9.8}
 BINDIR=${BINDIR:-$HOME/.local/bin}
 

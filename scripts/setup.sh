@@ -43,7 +43,7 @@ if [ -z "$mode" ]; then
 	fi
 	mode=$default
 	if [ "$interactive" = 1 ]; then
-		echo "  1) docker  everything in one image (~1GB); nothing installed on the system"
+		echo "  1) docker  everything in one image; nothing installed on the system"
 		echo "  2) native  binary in $BINDIR plus yt-dlp, deno and ffmpeg on the system (needs Go)"
 		read -r -p "How do you want to install? [$default] " answer
 		case "${answer:-$default}" in

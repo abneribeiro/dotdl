@@ -1,28 +1,15 @@
-# ============================================================
-# Multi-stage Dockerfile: one image with everything (dotdl:latest)
-# ============================================================
+# One image with everything a download needs (dotdl:latest, target app).
 #
 # Base images are written out in the FROM lines (no ARG) so Dependabot can
 # update them.
 
-# ============================================================
-# Base stage: Go dependencies (cached layer)
-# ============================================================
+# Go modules, in a layer that is only rebuilt when they change.
 FROM golang:1.27-alpine AS base
-
-# Lets Go download the toolchain version go.mod asks for.
-ENV GOTOOLCHAIN=auto
-
 WORKDIR /src
-
-# Copy the dependency files first to use Docker's layer cache (modules are
-# only downloaded again when they change).
 COPY go.mod go.sum ./
 RUN go mod download
 
-# ============================================================
-# Builder stage: static binary
-# ============================================================
+# The static binary.
 FROM base AS builder
 
 # Version embedded in the binary (dotdl version); the Makefile passes git describe.
@@ -30,40 +17,32 @@ ARG VERSION=dev
 ARG COMMIT=
 ARG DATE=
 
-# CGO_ENABLED=0 builds a binary with no C dependencies, which runs on any
-# Linux image.
 COPY cmd/ ./cmd/
 COPY internal/ ./internal/
-RUN CGO_ENABLED=0 go build -trimpath \
+RUN --mount=type=cache,target=/root/.cache/go-build \
+    CGO_ENABLED=0 go build -trimpath \
         -ldflags "-s -w -X main.version=${VERSION} -X main.commit=${COMMIT} -X main.date=${DATE}" \
         -o /dotdl ./cmd/dotdl
 
-# ============================================================
-# Tools stage: verified yt-dlp
-# ============================================================
+# yt-dlp, the dependency that ages fastest: it breaks whenever YouTube
+# changes. It is pinned and verified against the release's own SHA2-256SUMS;
+# `make update-ytdlp` rewrites the version and rebuilds the image.
 FROM debian:trixie-slim AS tools
 
 ARG TARGETARCH
-
-# yt-dlp breaks whenever YouTube changes: it is the dependency that ages
-# fastest in this image. It is pinned (reproducible builds) and verified
-# against the release's own SHA2-256SUMS. `make update-ytdlp` rewrites this
-# line with the latest version and rebuilds the image.
 ARG YTDLP_VERSION=2026.10.26
 
 RUN apt-get update && \
     apt-get install -y --no-install-recommends ca-certificates curl && \
     rm -rf /var/lib/apt/lists/*
 
-# The standalone binary is self-contained (no Python needed) and ships
-# yt-dlp-ejs, the scripts that solve YouTube's JavaScript challenges.
+# The standalone binary needs no Python and ships yt-dlp-ejs, the scripts
+# that solve YouTube's JavaScript challenges.
 RUN set -eux; \
-    # TARGETARCH is only set by BuildKit; without it, use the image's own.
-    arch="${TARGETARCH:-$(dpkg --print-architecture)}"; \
-    case "${arch}" in \
+    case "${TARGETARCH}" in \
         amd64) asset=yt-dlp_linux ;; \
         arm64) asset=yt-dlp_linux_aarch64 ;; \
-        *) echo "unsupported architecture: ${arch}" >&2; exit 1 ;; \
+        *) echo "unsupported architecture: ${TARGETARCH}" >&2; exit 1 ;; \
     esac; \
     release="https://github.com/yt-dlp/yt-dlp/releases/download/${YTDLP_VERSION}"; \
     cd /tmp; \
@@ -73,25 +52,21 @@ RUN set -eux; \
     install -m 0755 "${asset}" /usr/local/bin/yt-dlp; \
     /usr/local/bin/yt-dlp --version
 
-# ============================================================
-# Deno stage: yt-dlp's JavaScript runtime
-# ============================================================
-# Since 2025.11 yt-dlp needs a JS runtime to solve YouTube's challenges;
-# without one there are fewer formats or errors. Deno is what yt-dlp uses
-# by default, with no flag.
+# Deno, the JavaScript runtime yt-dlp uses by default for YouTube.
 FROM denoland/deno:bin-2.9.8 AS deno
 
-# ============================================================
-# App stage: the final image
-# ============================================================
-# Only what downloads need: ffmpeg (merging and the MP4 guarantee), yt-dlp,
-# deno and the binary.
+# Static ffmpeg and ffprobe (with libx264): two binaries instead of the
+# hundreds of libraries Debian's ffmpeg package brings, most of the old image.
+FROM mwader/static-ffmpeg:9.0.2-1 AS ffmpeg
+
+# The final image. Debian because yt-dlp and deno need glibc.
 FROM debian:trixie-slim AS app
 
 RUN apt-get update && \
-    apt-get install -y --no-install-recommends ca-certificates ffmpeg && \
+    apt-get install -y --no-install-recommends ca-certificates && \
     rm -rf /var/lib/apt/lists/*
 
+COPY --from=ffmpeg /ffmpeg /ffprobe /usr/local/bin/
 COPY --from=tools /usr/local/bin/yt-dlp /usr/local/bin/yt-dlp
 COPY --from=deno /deno /usr/local/bin/deno
 COPY --from=builder /dotdl /dotdl
