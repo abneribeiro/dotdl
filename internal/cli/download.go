@@ -173,10 +173,10 @@ func title(d *jobs.Download) string {
 	return "video · best quality"
 }
 
-// pickJSRuntime returns the --js-runtimes value for yt-dlp, which solves
-// YouTube's JavaScript challenges with it. Deno is yt-dlp's default and needs
-// no flag (""); node is only used when asked for, so it is enabled when it
-// is the only one. Without either, dotdl doctor reports it.
+// pickJSRuntime returns the --js-runtimes value for yt-dlp. Deno is yt-dlp's
+// default and needs no flag (""); node is only used when asked for, so it
+// is enabled when it is the only one. Without either, dotdl doctor reports
+// it.
 func pickJSRuntime(lookPath func(string) (string, error)) string {
 	if _, err := lookPath("deno"); err == nil {
 		return ""

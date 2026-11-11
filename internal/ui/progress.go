@@ -87,8 +87,7 @@ func (m *progressModel) Update(msg tea.Msg) (tea.Model, tea.Cmd) {
 		m.width = msg.Width
 	case tea.KeyPressMsg:
 		if msg.String() == "ctrl+c" && !m.canceling {
-			// SIGINT reaches yt-dlp and ffmpeg through the context: the .part
-			// files stay, and running the command again resumes.
+			// The context interrupts yt-dlp and ffmpeg.
 			m.canceling = true
 			m.cancel()
 		}

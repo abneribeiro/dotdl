@@ -30,8 +30,7 @@ func probeArgs(path string) []string {
 		"-of", "json", path}
 }
 
-// probeMedia runs ffprobe once on path. One run replaces the four that the
-// codecs, pixel format and duration used to take, which adds up on a
+// probeMedia reads everything in a single ffprobe run, which adds up on a
 // playlist.
 func probeMedia(ctx context.Context, path string) (mediaInfo, error) {
 	out, err := exec.CommandContext(ctx, "ffprobe", probeArgs(path)...).Output()
@@ -60,7 +59,7 @@ type ffprobeOutput struct {
 
 // parseProbe reads ffprobe's JSON. It keeps the first video stream that is
 // not a cover (an MP3 or M4A shows its artwork as an mjpeg/png "video") and
-// the first audio stream. It is pure, for tests.
+// the first audio stream.
 func parseProbe(data []byte) (mediaInfo, error) {
 	var out ffprobeOutput
 	if err := json.Unmarshal(data, &out); err != nil {

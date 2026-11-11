@@ -19,9 +19,7 @@ const (
 	ErrUnavailable
 	ErrUnsupportedURL
 
-	// ErrLoginRequired: the site wants a session (YouTube's "confirm you're
-	// not a bot" check, age restrictions, content behind a login). Cookies
-	// fix it (see Options.CookiesFile).
+	// ErrLoginRequired: the site wants a session, which cookies provide.
 	ErrLoginRequired
 
 	// ErrRateLimited: the site answered 429, too many requests from this IP.

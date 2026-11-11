@@ -17,9 +17,9 @@ func ValidateTime(s string) error {
 	if !timePattern.MatchString(s) {
 		return fmt.Errorf("invalid time %q (use MM:SS or HH:MM:SS)", s)
 	}
-	// Seconds, and minutes when there are hours, are clock fields: 01:75
-	// matched the pattern and reached yt-dlp as 2:15. The minutes of an MM:SS
-	// stay free, since 75:00 is a valid way to say 1h15.
+	// Seconds, and minutes when there are hours, are clock fields: yt-dlp
+	// would take 01:75 as 2:15. The minutes of an MM:SS stay free, since
+	// 75:00 is a valid way to say 1h15.
 	for _, p := range strings.Split(s, ":")[1:] {
 		if n, _ := strconv.Atoi(p); n >= 60 {
 			return fmt.Errorf("invalid time %q (minutes and seconds go from 00 to 59)", s)
@@ -53,9 +53,8 @@ func parseTime(s string) int {
 	return total
 }
 
-// ValidateRange checks both times and that the start comes before the end.
-// Without it, a reversed trim reached yt-dlp as "*02:00-01:00" and produced
-// an empty file.
+// ValidateRange checks both times and that the start comes before the end:
+// yt-dlp turns a reversed trim into an empty file.
 func ValidateRange(start, end string) error {
 	if err := ValidateTime(start); err != nil {
 		return err
