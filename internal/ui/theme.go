@@ -7,30 +7,27 @@ package ui
 
 import "charm.land/lipgloss/v2"
 
-// Palette, made for dark terminals: coral is the accent (bars, numbers,
-// headings, errors), green marks success and amber warnings. Text is
-// near-white, secondary text gray.
+// Palette: coral is the accent (bars, numbers, headings, errors), green
+// marks success and amber warnings. Text keeps the terminal's own color, so
+// it reads on dark and light backgrounds; secondary text is gray.
 var (
 	colorAccent = lipgloss.Color("#FF8771")
 	colorGreen  = lipgloss.Color("#56D58E")
 	colorAmber  = lipgloss.Color("#F2C46D")
-	colorText   = lipgloss.Color("#F0F0F2")
 	colorMuted  = lipgloss.Color("#7C7C80")
 	colorTrack  = lipgloss.Color("#383838")
 	colorInk    = lipgloss.Color("#131313")
 )
 
 var (
-	badgeStyle   = lipgloss.NewStyle().Bold(true).Foreground(colorInk).Background(colorAccent).Padding(0, 1)
-	accentStyle  = lipgloss.NewStyle().Foreground(colorAccent)
-	numberStyle  = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
-	strongStyle  = lipgloss.NewStyle().Bold(true).Foreground(colorText)
-	headingStyle = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
-	mutedStyle   = lipgloss.NewStyle().Foreground(colorMuted)
-	okStyle      = lipgloss.NewStyle().Foreground(colorGreen)
-	warnStyle    = lipgloss.NewStyle().Foreground(colorAmber)
-	errStyle     = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
-	trackStyle   = lipgloss.NewStyle().Foreground(colorTrack)
+	badgeStyle      = lipgloss.NewStyle().Bold(true).Foreground(colorInk).Background(colorAccent).Padding(0, 1)
+	accentStyle     = lipgloss.NewStyle().Foreground(colorAccent)
+	accentBoldStyle = lipgloss.NewStyle().Bold(true).Foreground(colorAccent)
+	strongStyle     = lipgloss.NewStyle().Bold(true)
+	mutedStyle      = lipgloss.NewStyle().Foreground(colorMuted)
+	okStyle         = lipgloss.NewStyle().Foreground(colorGreen)
+	warnStyle       = lipgloss.NewStyle().Foreground(colorAmber)
+	trackStyle      = lipgloss.NewStyle().Foreground(colorTrack)
 )
 
 // Status icons.

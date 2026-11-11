@@ -34,9 +34,9 @@ type HelpSection struct {
 func PrintHelp(w io.Writer, h Help) {
 	var b strings.Builder
 	b.WriteString(badge() + " " + mutedStyle.Render(h.Description) + "\n\n")
-	b.WriteString(headingStyle.Render("Usage") + "\n  " + h.Usage + "\n")
+	b.WriteString(accentBoldStyle.Render("Usage") + "\n  " + h.Usage + "\n")
 	for _, s := range h.Sections {
-		b.WriteString("\n" + headingStyle.Render(s.Title) + "\n")
+		b.WriteString("\n" + accentBoldStyle.Render(s.Title) + "\n")
 		width := 0
 		for _, r := range s.Rows {
 			width = max(width, lipgloss.Width(r[0]))
@@ -102,7 +102,7 @@ func PrintError(w io.Writer, err error) {
 		b.WriteString(warnStyle.Render(iconWarn+" Some items failed: ") + strings.TrimPrefix(err.Error(),
 			jobs.ErrPartial.Error()+": ") + "\n")
 	} else {
-		b.WriteString(errStyle.Render(iconFail+" ") + err.Error() + "\n")
+		b.WriteString(accentBoldStyle.Render(iconFail+" ") + err.Error() + "\n")
 	}
 	var dlErr *downloader.DownloadError
 	if errors.As(err, &dlErr) {
@@ -135,7 +135,7 @@ func PrintDoctor(w io.Writer, checks []doctor.Check) {
 			icon = warnStyle.Render(iconWarn)
 			warnings++
 		case doctor.LevelFail:
-			icon = errStyle.Render(iconFail)
+			icon = accentBoldStyle.Render(iconFail)
 			failures++
 		}
 		b.WriteString("  " + icon + " " + padRight(strongStyle.Render(c.Name), width) + "  " + c.Detail + "\n")
@@ -146,7 +146,7 @@ func PrintDoctor(w io.Writer, checks []doctor.Check) {
 	b.WriteString("\n")
 	switch {
 	case failures > 0:
-		b.WriteString(errStyle.Render(plural(failures, "problem", "problems")+" to fix.") + "\n")
+		b.WriteString(accentBoldStyle.Render(plural(failures, "problem", "problems")+" to fix.") + "\n")
 	case warnings > 0:
 		b.WriteString(okStyle.Render("Ready") + mutedStyle.Render(" ("+plural(warnings, "warning", "warnings")+")") + "\n")
 	default:
@@ -191,8 +191,13 @@ func PrintSaved(w io.Writer, key, value string) {
 
 // PrintUsageError writes a usage mistake with a pointer to the help.
 func PrintUsageError(w io.Writer, err error, helpCommand string) {
-	lipgloss.Fprint(w, errStyle.Render(iconFail+" ")+err.Error()+"\n"+
+	lipgloss.Fprint(w, accentBoldStyle.Render(iconFail+" ")+err.Error()+"\n"+
 		mutedStyle.Render("  See: "+helpCommand)+"\n")
+}
+
+// PrintVersion writes the version line.
+func PrintVersion(w io.Writer, version string) {
+	lipgloss.Fprint(w, badge()+" "+version+"\n")
 }
 
 func plural(n int, one, many string) string {
@@ -211,9 +216,4 @@ func padRight(s string, width int) string {
 // truncate cuts s to width display columns, ending with "…".
 func truncate(s string, width int) string {
 	return ansi.Truncate(s, width, "…")
-}
-
-// PrintVersion writes the version line.
-func PrintVersion(w io.Writer, version string) {
-	lipgloss.Fprint(w, badge()+" "+version+"\n")
 }

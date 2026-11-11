@@ -186,7 +186,7 @@ func (m *progressModel) render() string {
 func (m *progressModel) stats() string {
 	var parts []string
 	if m.fraction >= 0 {
-		parts = append(parts, numberStyle.Render(fmt.Sprintf("%3.0f%%", m.fraction*100)))
+		parts = append(parts, accentBoldStyle.Render(fmt.Sprintf("%3.0f%%", m.fraction*100)))
 	}
 	if m.speed > 0 {
 		parts = append(parts, mutedStyle.Render(humanBytes(m.speed)+"/s"))
