@@ -18,22 +18,8 @@ jobs:
         with:
           go-version: stable
 
-      - name: gofmt
-        run: |
-          unformatted="$(gofmt -l cmd internal)"
-          if [ -n "$unformatted" ]; then
-            echo "Unformatted (make fmt):"
-            echo "$unformatted"
-            exit 1
-          fi
-
-      - name: go vet
-        run: |
-          go vet ./...
-          go vet -tags integration ./...
-
-      - name: Tests
-        run: go test -race ./...
+      - name: gofmt, vet and tests
+        run: make check
 
       # GoReleaser builds for these systems; breaking one would only show on
       # release day.
@@ -59,6 +45,10 @@ jobs:
         with:
           context: .
           target: app
-          push: false
+          load: true
+          tags: dotdl:latest
           cache-from: type=gha
           cache-to: type=gha,mode=max
+      # doctor fails when yt-dlp, ffmpeg, ffprobe or deno do not run.
+      - name: Smoke test
+        run: docker run --rm dotdl:latest doctor
