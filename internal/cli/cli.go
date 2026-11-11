@@ -18,10 +18,11 @@ import (
 
 // Exit codes.
 const (
-	ExitOK          = 0
-	ExitFailure     = 1
-	ExitUsage       = 2
-	ExitInterrupted = 130 // 128 + SIGINT, as shells do
+	ExitOK      = 0
+	ExitFailure = 1
+	ExitUsage   = 2
+	// ExitInterrupted is 128 + SIGINT, as shells do.
+	ExitInterrupted = 130
 )
 
 // App is what the commands need from the outside world.
@@ -53,6 +54,9 @@ func (a *App) Run(ctx context.Context, args []string) int {
 		return ExitOK
 	}
 	cmd, rest := args[0], args[1:]
+	if _, ok := commandHelp[cmd]; ok && len(rest) > 0 && (rest[0] == "-h" || rest[0] == "--help") {
+		return a.help([]string{cmd})
+	}
 	switch cmd {
 	case "video":
 		return a.download(ctx, kindVideo, rest)

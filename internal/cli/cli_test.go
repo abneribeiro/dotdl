@@ -105,6 +105,8 @@ func TestRunCommands(t *testing.T) {
 		{[]string{"help", "video"}, ExitOK, "--quality", ""},
 		{[]string{"video", "--help"}, ExitOK, "--original", ""},
 		{[]string{"audio", "-h"}, ExitOK, "--format", ""},
+		{[]string{"config", "--help"}, ExitOK, "dotdl config [key] [value]", ""},
+		{[]string{"doctor", "-h"}, ExitOK, "dotdl doctor", ""},
 		{[]string{"version"}, ExitOK, "v1.2.3", ""},
 		{[]string{"nope"}, ExitUsage, "", `unknown command "nope"`},
 		{[]string{"help", "nope"}, ExitUsage, "", `unknown command "nope"`},
