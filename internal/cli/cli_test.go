@@ -202,7 +202,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-file=$(echo "$out" | sed "s/%(title)s/Clip/; s/%(id)s/abc/; s/%(ext)s/mp4/")
+file=$(echo "$out" | sed "s/%(title).150B/Clip/; s/%(id)s/abc/; s/%(ext)s/mp4/")
 echo "[download] Destination: $file"
 printf 'x' > "$file"
 [ -n "$print" ] && echo "$file" >> "$print"

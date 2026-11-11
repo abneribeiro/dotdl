@@ -94,13 +94,16 @@ func TestRunPlain(t *testing.T) {
 		report(jobs.Event{Stage: jobs.StageDownload, Item: "a.mp4"})
 		report(jobs.Event{Progress: true, Fraction: 0.5})
 		report(jobs.Event{Log: "WARNING: careful"})
+		report(jobs.Event{Log: "[youtube] chatter that stays hidden"})
+		report(jobs.Event{Note: "a.mp4: remuxing to MP4 (lossless)"})
 		report(jobs.Event{Stage: jobs.StageDownload, Item: "b.mp4"})
 		return jobs.Result{Files: []string{"/v/a.mp4"}}, nil
 	})
 	if err != nil || len(res.Files) != 1 {
 		t.Fatalf("RunPlain = %v, %v", res, err)
 	}
-	want := "Fetching info\nDownloading: a.mp4\n  warning: careful\nDownloading: b.mp4\n"
+	want := "Fetching info\nDownloading: a.mp4\n  warning: careful\n  a.mp4: remuxing to MP4 (lossless)\n" +
+		"Downloading: b.mp4\n"
 	if out.String() != want {
 		t.Errorf("plain output =\n%q\nwant\n%q", out.String(), want)
 	}

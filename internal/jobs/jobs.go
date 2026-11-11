@@ -46,8 +46,10 @@ type Event struct {
 	// Index and Count: position in a list (playlist, several URLs).
 	Index int
 	Count int
-	// Log is an output line (yt-dlp, ffmpeg).
+	// Log is an output line of yt-dlp.
 	Log string
+	// Note is a message from dotdl itself, for the user to read.
+	Note string
 }
 
 // Reporter receives a job's events. It may be called from several goroutines
@@ -81,9 +83,8 @@ func EnvFrom(cfg *config.Config) Env {
 	}
 }
 
-// PrepareOutputDir creates the output folder and checks it is writable. It
-// runs before the job: otherwise a read-only folder only failed at the end,
-// after minutes of downloading and converting.
+// PrepareOutputDir creates the output folder and checks it is writable
+// before the job starts, not after minutes of downloading.
 func PrepareOutputDir(dir string) error {
 	if err := os.MkdirAll(dir, 0o755); err != nil {
 		return outputDirError(dir, err)

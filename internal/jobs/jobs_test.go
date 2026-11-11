@@ -43,7 +43,7 @@ while [ $# -gt 0 ]; do
   esac
   shift
 done
-file=$(echo "$out" | sed "s/%(title)s/Test/; s/%(id)s/abc/; s/%(ext)s/$ext/")
+file=$(echo "$out" | sed "s/%(title).150B/Test/; s/%(id)s/abc/; s/%(ext)s/$ext/")
 echo "[download] Destination: $file"
 echo "dotdl-progress 512 1024 NA 2048.0 3"
 echo "dotdl-progress 1024 1024 NA 2048.0 0"
@@ -137,26 +137,42 @@ func TestDownloadRunReportsConversions(t *testing.T) {
 	if res.Converted[file] != "vp9" {
 		t.Errorf("Converted = %v, want %s from vp9", res.Converted, file)
 	}
-	if !c.has(func(e Event) bool { return e.Stage == StageConvert }) {
-		t.Error("missing the conversion stage")
+	if !c.has(func(e Event) bool { return e.Stage == StageConvert && strings.Contains(e.Note, "converting VP9") }) {
+		t.Error("missing the conversion stage with its note")
 	}
 }
 
+// MP3 always re-encodes, so it takes the best audio; M4A asks for a stream
+// that is already AAC first, which needs no re-encoding.
 func TestDownloadRunAudio(t *testing.T) {
-	bin := fakePath(t)
-	fakeBin(t, bin, "yt-dlp", fakeYtdlp)
+	for format, wantArgs := range map[string]string{
+		"mp3": "-f ba/b -x --audio-format mp3",
+		"m4a": "-f ba[acodec^=mp4a]/ba/b -x --audio-format m4a",
+	} {
+		t.Run(format, func(t *testing.T) {
+			bin := fakePath(t)
+			argsFile := filepath.Join(t.TempDir(), "args")
+			fakeBin(t, bin, "yt-dlp", `echo "$*" > "`+argsFile+`"`+fakeYtdlp)
 
-	out := t.TempDir()
-	d, err := NewDownload(DownloadInput{URLs: []string{"https://youtu.be/abc"}, OutputDir: out, Format: "mp3"}, "")
-	if err != nil {
-		t.Fatal(err)
-	}
-	res, err := d.Run(context.Background(), Env{TempDir: t.TempDir()}, func(Event) {})
-	if err != nil {
-		t.Fatalf("Run failed: %v", err)
-	}
-	if !slices.Equal(res.Files, []string{filepath.Join(out, "Test [abc].mp3")}) {
-		t.Errorf("Files = %v", res.Files)
+			out := t.TempDir()
+			d, err := NewDownload(DownloadInput{URLs: []string{"https://youtu.be/abc"}, OutputDir: out, Format: format}, "")
+			if err != nil {
+				t.Fatal(err)
+			}
+			res, err := d.Run(context.Background(), Env{TempDir: t.TempDir()}, func(Event) {})
+			if err != nil {
+				t.Fatalf("Run failed: %v", err)
+			}
+			if !slices.Equal(res.Files, []string{filepath.Join(out, "Test [abc]."+format)}) {
+				t.Errorf("Files = %v", res.Files)
+			}
+			args, _ := os.ReadFile(argsFile)
+			for _, want := range []string{wantArgs, "--concurrent-fragments 4"} {
+				if !strings.Contains(string(args), want) {
+					t.Errorf("yt-dlp ran without %q: %s", want, args)
+				}
+			}
+		})
 	}
 }
 

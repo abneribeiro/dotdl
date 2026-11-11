@@ -20,11 +20,13 @@ func TestBuildArgs(t *testing.T) {
 				ArchiveFile:    "/videos/.dotdl-archive.txt",
 				Continue:       true,
 				IgnoreErrors:   true,
+
+				ConcurrentFragments: 4,
 			},
 			want: []string{
 				"-o", "/videos/%(title)s [%(id)s].%(ext)s",
 				"--download-archive", "/videos/.dotdl-archive.txt",
-				"--continue", "--ignore-errors", "--newline",
+				"--continue", "--ignore-errors", "--concurrent-fragments", "4", "--newline",
 				"https://youtu.be/abc", "https://x.com/u/status/1",
 			},
 		},
@@ -104,7 +106,8 @@ func TestBuildArgsWithSection(t *testing.T) {
 // swallow the next URL.
 func TestBuildArgsOmitsUnsetOptions(t *testing.T) {
 	got := BuildArgs(Options{URLs: []string{"https://youtu.be/abc"}})
-	for _, flag := range []string{"--cookies", "--js-runtimes", "-x", "--embed-metadata", "--progress-template"} {
+	for _, flag := range []string{"--cookies", "--js-runtimes", "-x", "--embed-metadata", "--progress-template",
+		"--concurrent-fragments"} {
 		if slices.Contains(got, flag) {
 			t.Errorf("unexpected %q without the option set: %v", flag, got)
 		}
@@ -125,22 +128,24 @@ func TestBuildArgsWithProgress(t *testing.T) {
 
 func TestQualitySort(t *testing.T) {
 	tests := []struct {
-		q       string
-		want    string
-		wantErr bool
+		q          string
+		want       string
+		wantHeight int
+		wantErr    bool
 	}{
-		{"", "", false},
-		{"best", "", false},
-		{"720", "res:720", false},
-		{"1080", "res:1080", false},
-		{"abc", "", true},
-		{"0", "", true},
-		{"-720", "", true},
+		{"", "", 0, false},
+		{"best", "", 0, false},
+		{"720", "res:720", 720, false},
+		{"1080", "res:1080", 1080, false},
+		{"abc", "", 0, true},
+		{"0", "", 0, true},
+		{"-720", "", 0, true},
 	}
 	for _, tt := range tests {
-		got, err := QualitySort(tt.q)
-		if (err != nil) != tt.wantErr || got != tt.want {
-			t.Errorf("QualitySort(%q) = %q, %v; want %q (error: %v)", tt.q, got, err, tt.want, tt.wantErr)
+		got, height, err := QualitySort(tt.q)
+		if (err != nil) != tt.wantErr || got != tt.want || height != tt.wantHeight {
+			t.Errorf("QualitySort(%q) = %q, %d, %v; want %q, %d (error: %v)",
+				tt.q, got, height, err, tt.want, tt.wantHeight, tt.wantErr)
 		}
 		// The cap is yt-dlp's "res" (the short side), never the height: a
 		// [height<=720] filter threw away a vertical 720x1280 and delivered

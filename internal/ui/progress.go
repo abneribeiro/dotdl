@@ -122,23 +122,19 @@ func (m *progressModel) apply(e jobs.Event) {
 	if e.Count > 0 {
 		m.index, m.count = e.Index, e.Count
 	}
-	if note, warning := noteFrom(e.Log); note != "" {
+	if note, warning := noteFrom(e); note != "" {
 		m.note, m.warning = note, warning
 	}
 }
 
-// noteFrom keeps the log lines worth showing under the bar: yt-dlp warnings
-// and dotdl's own notes. The rest of yt-dlp's chatter is hidden.
-func noteFrom(line string) (note string, warning bool) {
-	switch {
-	case strings.HasPrefix(line, "WARNING:"):
-		return strings.TrimSpace(strings.TrimPrefix(line, "WARNING:")), true
-	case strings.HasPrefix(line, "Note:"):
-		return strings.TrimSpace(strings.TrimPrefix(line, "Note:")), false
-	case strings.Contains(line, ": converting "), strings.Contains(line, ": remuxing "):
-		return line, false
+// noteFrom returns what an event has worth showing under the bar: a yt-dlp
+// warning or a note from dotdl itself. The rest of yt-dlp's chatter is
+// hidden.
+func noteFrom(e jobs.Event) (note string, warning bool) {
+	if text, ok := strings.CutPrefix(e.Log, "WARNING:"); ok {
+		return strings.TrimSpace(text), true
 	}
-	return "", false
+	return e.Note, false
 }
 
 func (m *progressModel) View() tea.View {
@@ -268,7 +264,7 @@ func RunPlain(ctx context.Context, out io.Writer, run RunFunc) (jobs.Result, err
 			}
 			fmt.Fprintln(out, line)
 		}
-		if note, warning := noteFrom(e.Log); note != "" {
+		if note, warning := noteFrom(e); note != "" {
 			if warning {
 				note = "warning: " + note
 			}

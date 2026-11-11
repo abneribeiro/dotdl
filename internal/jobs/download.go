@@ -9,7 +9,6 @@ import (
 	"os"
 	"path/filepath"
 	"slices"
-	"strconv"
 	"strings"
 	"sync"
 
@@ -22,23 +21,34 @@ const (
 	// folder; repeating a request skips them and carries on with the rest.
 	archiveFileName = ".dotdl-archive.txt"
 
-	// audioArchiveFileName is the archive for audio-only downloads. It must
-	// be a separate file: the archive records the video ID, not the format,
-	// and with a single file a video already saved as MP4 never came out as
-	// MP3.
+	// audioArchiveFileName is the archive for audio-only downloads. It is a
+	// separate file because the archive records the video ID, not the
+	// format: sharing one would skip the MP3 of a video saved as MP4.
 	audioArchiveFileName = ".dotdl-archive-audio.txt"
 
 	// pendingFileName lists the files yt-dlp finished that have not been
 	// through the MP4 conversion yet. It lives in the output folder, not in a
 	// temp file, because the archive records a video BEFORE the conversion:
-	// a Ctrl+C in between left the .webm forever, since the next run skipped
-	// the video. It is deleted only once everything it lists is converted.
+	// after a Ctrl+C in between, the next run skips the video and only this
+	// list remembers its .webm. It is deleted once everything is converted.
 	pendingFileName = ".dotdl-pending.txt"
 
 	// maxH264Height is the resolution above which the big sites (YouTube in
-	// particular) stop offering H.264: past it, guaranteeing an MP4 means
-	// re-encoding.
+	// particular) stop offering H.264: past it, an MP4 means re-encoding.
 	maxH264Height = 1080
+
+	// maxTitleBytes caps the title in a file name. Captions used as titles
+	// (Instagram, TikTok, X) run past the 255 bytes a file name can have.
+	maxTitleBytes = 150
+
+	// concurrentFragments speeds up the sites that serve a video in pieces
+	// (HLS/DASH).
+	concurrentFragments = 4
+
+	// audioFormat is the best audio. nativeAACFormat prefers a stream that
+	// is already AAC, which becomes an M4A without re-encoding.
+	audioFormat     = "ba/b"
+	nativeAACFormat = "ba[acodec^=mp4a]/" + audioFormat
 )
 
 // Formats a Download accepts.
@@ -75,8 +85,7 @@ type Download struct {
 	OutputDir  string
 	Format     string
 	FormatSort string
-	// Height is the requested resolution, 0 for "best": it is used to warn
-	// that above 1080p a re-encode is almost certain.
+	// Height is the requested resolution, 0 for "best".
 	Height  int
 	Section *downloader.Section
 	Cookies string
@@ -101,16 +110,11 @@ func NewDownload(in DownloadInput, outputBase string) (*Download, error) {
 	}
 
 	var err error
-	if d.FormatSort, err = downloader.QualitySort(in.Quality); err != nil {
+	if d.FormatSort, d.Height, err = downloader.QualitySort(in.Quality); err != nil {
 		return nil, err
 	}
-	if d.FormatSort != "" {
-		if d.Audio() {
-			return nil, fmt.Errorf("the quality picks the video resolution and does not apply to %s", d.Format)
-		}
-		// Already validated by QualitySort, which rejects anything but a
-		// positive integer.
-		d.Height, _ = strconv.Atoi(in.Quality)
+	if d.FormatSort != "" && d.Audio() {
+		return nil, fmt.Errorf("the quality picks the video resolution and does not apply to %s", d.Format)
 	}
 
 	if d.OutputDir, err = ResolveOutputDir(in.OutputDir, outputBase); err != nil {
@@ -148,7 +152,7 @@ func NewDownload(in DownloadInput, outputBase string) (*Download, error) {
 		}
 	}
 	if d.Cookies != "" {
-		if _, err := os.Stat(d.Cookies); err != nil {
+		if err := config.CheckCookiesFile(d.Cookies); err != nil {
 			return nil, fmt.Errorf("cookies: %w", err)
 		}
 	}
@@ -180,12 +184,10 @@ func ResolveOutputDir(dir, base string) (string, error) {
 }
 
 // outputTemplate returns yt-dlp's -o. A trim puts the interval in the name:
-// with the same name as the full video, yt-dlp found the existing file and
-// answered "already downloaded". One way it trimmed nothing; the other way
-// it recorded the full video in the archive with the trim's content, and
-// that video was never downloaded again.
+// with the full video's name, yt-dlp would find that file and answer
+// "already downloaded" instead of trimming.
 func outputTemplate(dir string, sec *downloader.Section) string {
-	name := "%(title)s [%(id)s]"
+	name := fmt.Sprintf("%%(title).%dB [%%(id)s]", maxTitleBytes)
 	if sec != nil {
 		name += fmt.Sprintf(" (%s-%s)", clockForFilename(sec.Start), clockForFilename(sec.End))
 	}
@@ -198,9 +200,8 @@ func clockForFilename(t string) string {
 	return strings.ReplaceAll(t, ":", ".")
 }
 
-// validateBatchFile checks that the batch file exists and that every useful
-// line is a valid URL: catching this here saves a whole yt-dlp run. Empty
-// lines and comments (#) are skipped, as yt-dlp does.
+// validateBatchFile checks that the batch file exists and that every line
+// is a valid URL. Empty lines and comments (#) are skipped, as yt-dlp does.
 func validateBatchFile(path string) error {
 	f, err := os.Open(path)
 	if err != nil {
@@ -242,6 +243,10 @@ func (r *reporterSink) send(e Event) {
 }
 
 func (r *reporterSink) log(line string) { r.send(Event{Log: line}) }
+
+func (r *reporterSink) note(format string, args ...any) {
+	r.send(Event{Note: fmt.Sprintf(format, args...)})
+}
 
 // progress turns a downloader.Progress into an Event.
 func (r *reporterSink) progress(p downloader.Progress) {
@@ -295,31 +300,32 @@ func (d *Download) Run(ctx context.Context, env Env, report Reporter) (Result, e
 		JSRuntimes:     env.JSRuntimes,
 		Progress:       sink.progress,
 		Log:            sink.log,
+
+		ConcurrentFragments: concurrentFragments,
 	}
 
 	archive := archiveFileName
 	switch {
 	case d.Audio():
-		opts.Format = "ba/b"
+		opts.Format = audioFormat
+		if d.Format == FormatM4A {
+			opts.Format = nativeAACFormat
+		}
 		opts.ExtractAudio = d.Format
 		opts.EmbedMetadata = true
 		archive = audioArchiveFileName
 
 	case d.Format == FormatMP4:
-		// First layer of the guarantee: ask yt-dlp for formats that are
-		// already H.264/AAC in an MP4. That covers the common case without
-		// re-encoding.
 		opts.MergeFormat = "mp4"
 		opts.FormatSort = downloader.MP4Sort(d.FormatSort)
 		if d.Height > maxH264Height {
-			sink.log(fmt.Sprintf("Note: above %dp most sites only serve AV1/VP9, so the video will be "+
-				"converted to H.264, which takes a while. %dp downloads directly.", maxH264Height, maxH264Height))
+			sink.note("above %dp most sites only serve AV1/VP9, so the video will be converted to H.264, "+
+				"which takes a while. %dp downloads directly.", maxH264Height, maxH264Height)
 		}
 	}
 
-	// yt-dlp appends one line per finished file here: that is how we know
-	// exactly what was produced, playlists included. In MP4 mode it is the
-	// persistent pending list; otherwise a temp file.
+	// yt-dlp appends one line per finished file here, playlists included.
+	// In MP4 mode it is the persistent pending list; otherwise a temp file.
 	if d.Format == FormatMP4 {
 		opts.PrintToFile = filepath.Join(d.OutputDir, pendingFileName)
 	} else {
@@ -352,10 +358,9 @@ func (d *Download) Run(ctx context.Context, env Env, report Reporter) (Result, e
 
 	var convErr error
 	if d.Format == FormatMP4 {
-		// The conversion runs even when yt-dlp failed: with --ignore-errors a
-		// playlist may have downloaded almost everything before tripping on a
-		// private video, and those files must come out as MP4 too. It also
-		// handles anything left pending by an interrupted run.
+		// The conversion runs even when yt-dlp failed: a playlist may have
+		// downloaded almost everything before tripping on a private video.
+		// It also handles what an interrupted run left pending.
 		res.Files, res.Converted, convErr = ensurePlayable(ctx, opts.PrintToFile, sink)
 	} else {
 		res.Files = printedPaths(opts.PrintToFile)
@@ -373,24 +378,19 @@ func (d *Download) Run(ctx context.Context, env Env, report Reporter) (Result, e
 	return res, convErr
 }
 
-// ensurePlayable converts the files listed in pathFile to MP4/H.264/AAC and
-// returns the final paths, plus the files that needed a re-encode mapped to
-// their source codec. It is the second layer of the guarantee: -S asks for
-// the right codecs, this makes sure of them when the site did not have
-// them. When everything is converted it deletes the list; after failures or
-// an interruption it keeps it, and the next run starts there (EnsureMP4
-// leaves compliant files alone).
+// ensurePlayable converts the files listed in pathFile to MP4/H.264/AAC
+// (see downloader.EnsureMP4) and returns the final paths, plus the files
+// that needed a re-encode mapped to their source codec. When everything is
+// converted it deletes the list; after failures or an interruption it keeps
+// it, and the next run starts there.
 func ensurePlayable(ctx context.Context, pathFile string, sink *reporterSink) ([]string, map[string]string, error) {
 	paths := printedPaths(pathFile)
 	var files []string
 	converted := make(map[string]string)
 	var failed int
 	for i, path := range paths {
-		// A canceled context will not convert anything; better to leave the
-		// files untouched than to try and fail N times.
 		if ctx.Err() != nil {
-			sink.log(fmt.Sprintf("Conversion interrupted: %s and the next ones convert on the next run.",
-				filepath.Base(path)))
+			sink.note("conversion interrupted: %s and the next ones convert on the next run", filepath.Base(path))
 			return files, converted, context.Canceled
 		}
 		var source string
@@ -402,7 +402,7 @@ func ensurePlayable(ctx context.Context, pathFile string, sink *reporterSink) ([
 					msg = fmt.Sprintf("converting %s to H.264, this can take a few minutes", strings.ToUpper(vcodec))
 				}
 				sink.send(Event{Stage: StageConvert, Item: filepath.Base(path), Index: i + 1, Count: len(paths),
-					Progress: true, Fraction: 0, ETA: -1, Log: filepath.Base(path) + ": " + msg})
+					Progress: true, Fraction: 0, ETA: -1, Note: filepath.Base(path) + ": " + msg})
 			},
 			Progress: func(f float64) {
 				sink.send(Event{Progress: true, Fraction: f, ETA: -1})
@@ -424,8 +424,7 @@ func ensurePlayable(ctx context.Context, pathFile string, sink *reporterSink) ([
 	}
 
 	if failed > 0 {
-		// The download itself worked: the files exist, they are just not
-		// guaranteed to be MP4.
+		// The download itself worked: the files exist, just not as MP4.
 		return files, converted, fmt.Errorf("%w: %d of %d file(s) could not be converted to MP4 "+
 			"(listed in %s and retried on the next run)", ErrPartial, failed, len(paths), pendingFileName)
 	}
@@ -453,8 +452,7 @@ func printedPaths(pathFile string) []string {
 			continue
 		}
 		seen[line] = true
-		// The video may have been removed or converted since (.webm to
-		// .mp4): check before calling ffmpeg.
+		// The file may have been removed or converted (.webm to .mp4) since.
 		if _, err := os.Stat(line); err != nil {
 			continue
 		}

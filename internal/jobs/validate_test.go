@@ -72,6 +72,7 @@ func TestNewDownloadValidation(t *testing.T) {
 		{"quality with audio", DownloadInput{URLs: one, Format: "mp3", Quality: "720"}, true},
 		{"unknown format", DownloadInput{URLs: one, Format: "webm"}, true},
 		{"missing cookies", DownloadInput{URLs: one, Cookies: "/does/not/exist.txt"}, true},
+		{"cookies is a folder", DownloadInput{URLs: one, Cookies: t.TempDir()}, true},
 	}
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
@@ -101,13 +102,13 @@ func TestNewDownloadMapsQualityAndFormat(t *testing.T) {
 }
 
 func TestOutputTemplate(t *testing.T) {
-	if full := outputTemplate("/videos", nil); full != "/videos/%(title)s [%(id)s].%(ext)s" {
+	if full := outputTemplate("/videos", nil); full != "/videos/%(title).150B [%(id)s].%(ext)s" {
 		t.Errorf("outputTemplate without a trim = %q", full)
 	}
 	// With the full video's name, yt-dlp said "already downloaded" and the
 	// archive recorded the trim in place of the video.
 	trimmed := outputTemplate("/videos", &downloader.Section{Start: "01:30", End: "00:02:00"})
-	if want := "/videos/%(title)s [%(id)s] (01.30-00.02.00).%(ext)s"; trimmed != want {
+	if want := "/videos/%(title).150B [%(id)s] (01.30-00.02.00).%(ext)s"; trimmed != want {
 		t.Errorf("outputTemplate with a trim = %q, want %q", trimmed, want)
 	}
 	if strings.Contains(filepath.Base(trimmed), ":") {
