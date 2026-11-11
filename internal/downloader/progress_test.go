@@ -45,6 +45,7 @@ func TestParseLinePhases(t *testing.T) {
 		{`[Merger] Merging formats into "/v/Video [abc].mp4"`, PhaseMerge, "/v/Video [abc].mp4", 0},
 		{"[ExtractAudio] Destination: /w/song.m4a", PhaseExtract, "/w/song.m4a", 0},
 		{"[download] /v/a.mp4 has already been downloaded", PhaseDownload, "/v/a.mp4", 0},
+		{"[download] abc: has already been recorded in the archive", PhaseDownload, "abc", 0},
 		{"[download] Downloading item 3 of 12", PhaseInfo, "", 3},
 	}
 	for _, tt := range tests {

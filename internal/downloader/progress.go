@@ -57,7 +57,7 @@ const progressTemplate = "download:" + progressMarker +
 
 var (
 	destinationLine = regexp.MustCompile(`^\[download\] Destination: (.+)$`)
-	alreadyLine     = regexp.MustCompile(`^\[download\] (.+) has already been (?:downloaded|recorded in the archive)`)
+	alreadyLine     = regexp.MustCompile(`^\[download\] (.+?):? has already been (?:downloaded|recorded in the archive)`)
 	itemLine        = regexp.MustCompile(`^\[download\] Downloading item (\d+) of (\d+)`)
 	mergeLine       = regexp.MustCompile(`^\[Merger\] Merging formats into "(.+)"$`)
 	extractLine     = regexp.MustCompile(`^\[ExtractAudio\] Destination: (.+)$`)
