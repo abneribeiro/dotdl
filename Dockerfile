@@ -57,7 +57,7 @@ FROM denoland/deno:bin-2.9.8 AS deno
 
 # Static ffmpeg and ffprobe (with libx264): two binaries instead of the
 # hundreds of libraries Debian's ffmpeg package brings, most of the old image.
-FROM mwader/static-ffmpeg:9.0.2-1 AS ffmpeg
+FROM mwader/static-ffmpeg:9.1 AS ffmpeg
 
 # The final image. Debian because yt-dlp and deno need glibc.
 FROM debian:trixie-slim AS app
